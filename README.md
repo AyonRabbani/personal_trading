@@ -38,3 +38,18 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 ## Data Providers
 
 By default the application fetches market data from [Polygon.io](https://polygon.io). If the `POLYGON_API_KEY` environment variable is not defined, a set of random prices will be generated instead. This allows the dashboard to run with dummy data when real data sources are not available.
+
+Macroeconomic data is retrieved from [FRED](https://fred.stlouisfed.org). Set `FRED_API_KEY` to enable live queries. Without it, synthetic series are generated so the macro dashboard still functions offline.
+
+## Macro Metrics
+
+The dashboard computes a small set of macro indicators from FRED data:
+
+- **Yield Curve (10y-2y)** – difference between 10 and 2 year Treasury yields.
+- **Real Rate (10y-CPI)** – 10 year yield adjusted for inflation.
+- **Unemployment** – latest U.S. unemployment rate.
+- **GDP QoQ** – quarterly growth rate of real GDP.
+- **VIX Level** – current market volatility index.
+- **USD 30d Momentum** – 30 day percentage change in the trade weighted dollar index.
+
+These metrics are exposed via `/api/macro-metrics` and shown on the main dashboard.
