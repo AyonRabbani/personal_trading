@@ -11,7 +11,8 @@
     "build": "nx build dashboard-ui",
     "start": "nx serve dashboard-ui",
     "lint": "nx lint",
-    "show-momentum": "tsx scripts/show-momentum.ts"
+    "show-momentum": "tsx scripts/show-momentum.ts",
+    "rank-assets": "tsx scripts/rank-assets.ts"
   },
   "dependencies": {
     "next": "15.4.2",
