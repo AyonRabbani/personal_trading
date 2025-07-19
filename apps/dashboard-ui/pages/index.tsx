@@ -25,6 +25,10 @@ const MacroMetrics = dynamic(
   () => import('@workspace/ui-components/MacroMetrics'),
   { ssr: false }
 );
+const IndustryFlowDashboard = dynamic(
+  () => import('@workspace/ui-components/IndustryFlowDashboard'),
+  { ssr: false }
+);
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -35,6 +39,7 @@ export default function HomePage() {
   const { data: portfolio } = useSWR('/api/portfolio', fetcher);
   const { data: assetMetrics } = useSWR('/api/asset-metrics', fetcher);
   const { data: macro } = useSWR('/api/macro-metrics', fetcher);
+  const { data: flows } = useSWR('/api/industry-flows', fetcher);
   const [capital, setCapital] = useState(10000);
 
   const metrics = portfolio
@@ -59,6 +64,7 @@ export default function HomePage() {
       )}
       {metrics.length > 0 && <MetricsSummary metrics={metrics} />}
       {macro && <MacroMetrics metrics={macro.metrics} />}
+      {flows && <IndustryFlowDashboard flows={flows} />}
       {portfolio && <RiskDashboard signals={signals || []} holdings={portfolio.holdings} />}
       {assetMetrics && <AssetMetricsTable metrics={assetMetrics} />}
     </div>
