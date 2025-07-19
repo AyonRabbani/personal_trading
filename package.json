@@ -10,7 +10,8 @@
     "dev": "nx serve dashboard-ui",
     "build": "nx build dashboard-ui",
     "start": "nx serve dashboard-ui",
-    "lint": "nx lint"
+    "lint": "nx lint",
+    "show-momentum": "tsx scripts/show-momentum.ts"
   },
   "dependencies": {
     "next": "15.4.2",
@@ -29,6 +30,7 @@
     "eslint-config-next": "15.4.2",
     "nx": "18.2.0",
     "tailwindcss": "^4",
+    "tsx": "^4.20.3",
     "typescript": "^5"
   }
 }
