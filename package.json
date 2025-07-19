@@ -2,26 +2,33 @@
   "name": "personal_trading",
   "version": "0.1.0",
   "private": true,
+  "workspaces": [
+    "apps/*",
+    "libs/*"
+  ],
   "scripts": {
-    "dev": "next dev --turbopack",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
+    "dev": "nx serve dashboard-ui",
+    "build": "nx build dashboard-ui",
+    "start": "nx serve dashboard-ui",
+    "lint": "nx lint"
   },
   "dependencies": {
+    "next": "15.4.2",
     "react": "19.1.0",
     "react-dom": "19.1.0",
-    "next": "15.4.2"
+    "swr": "^2.3.4"
   },
   "devDependencies": {
-    "typescript": "^5",
+    "@eslint/eslintrc": "^3",
+    "@nx/next": "18.2.0",
+    "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@tailwindcss/postcss": "^4",
-    "tailwindcss": "^4",
     "eslint": "^9",
     "eslint-config-next": "15.4.2",
-    "@eslint/eslintrc": "^3"
+    "nx": "18.2.0",
+    "tailwindcss": "^4",
+    "typescript": "^5"
   }
 }
