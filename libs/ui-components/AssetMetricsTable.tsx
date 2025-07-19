@@ -5,6 +5,7 @@ export interface AssetMetric {
   momentum: number;
   risk: number;
   sentiment: number;
+  peerRank: number;
 }
 
 export interface Props {
@@ -24,6 +25,7 @@ export default function AssetMetricsTable({ metrics }: Props) {
             <th className="px-2 py-1 text-left">Momentum</th>
             <th className="px-2 py-1 text-left">Risk</th>
             <th className="px-2 py-1 text-left">Sentiment</th>
+            <th className="px-2 py-1 text-left">Peer Rank</th>
           </tr>
         </thead>
         <tbody className="bg-white divide-y divide-gray-200">
@@ -33,6 +35,7 @@ export default function AssetMetricsTable({ metrics }: Props) {
               <td className="px-2 py-1">{m.momentum.toFixed(4)}</td>
               <td className="px-2 py-1">{m.risk.toFixed(4)}</td>
               <td className="px-2 py-1">{m.sentiment.toFixed(4)}</td>
+              <td className="px-2 py-1">{m.peerRank.toFixed(2)}</td>
             </tr>
           ))}
         </tbody>

@@ -10,6 +10,13 @@ interface Metric {
   momentum: number;
   risk: number;
   sentiment: number;
+  peerRank: number;
+}
+
+function rankScores(values: number[], ascending = false): number[] {
+  const sorted = [...values].sort((a, b) => (ascending ? a - b : b - a));
+  const max = sorted.length - 1;
+  return values.map((v) => 1 - sorted.indexOf(v) / (max === 0 ? 1 : max));
 }
 
 function calcStdDev(arr: number[]): number {
@@ -27,7 +34,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     const news = await fetchNewsScores(Object.keys(bySymbol));
 
-    const results: Metric[] = [];
+    const temp: Array<Metric & { valueScore: number }> = [];
     for (const symbol of Object.keys(bySymbol)) {
       const arr = bySymbol[symbol].sort((a, b) => a.timestamp - b.timestamp);
       const first = arr[0];
@@ -42,9 +49,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
       const risk = calcStdDev(returns);
       const sentiment = news[symbol]?.sentiment ?? 0;
+      const valueScore = 1 / last.close;
 
-      results.push({ symbol, momentum, risk, sentiment });
+      temp.push({ symbol, momentum, risk, sentiment, peerRank: 0, valueScore });
     }
+
+    const valueRanks = rankScores(temp.map((t) => t.valueScore));
+    const momentumRanks = rankScores(temp.map((t) => t.momentum));
+    const volRanks = rankScores(temp.map((t) => t.risk), true);
+
+    const results: Metric[] = temp.map((t, idx) => ({
+      symbol: t.symbol,
+      momentum: t.momentum,
+      risk: t.risk,
+      sentiment: t.sentiment,
+      peerRank: (valueRanks[idx] + momentumRanks[idx] + volRanks[idx]) / 3,
+    }));
 
     res.status(200).json(results);
   } catch (err) {
