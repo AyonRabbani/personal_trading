@@ -29,6 +29,14 @@ const IndustryFlowDashboard = dynamic(
   () => import('@workspace/ui-components/IndustryFlowDashboard'),
   { ssr: false }
 );
+const PortfolioVaRChart = dynamic(
+  () => import('@workspace/ui-components/PortfolioVaRChart'),
+  { ssr: false }
+);
+const OptionProjectionChart = dynamic(
+  () => import('@workspace/ui-components/OptionProjectionChart'),
+  { ssr: false }
+);
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -40,6 +48,7 @@ export default function HomePage() {
   const { data: assetMetrics } = useSWR('/api/asset-metrics', fetcher);
   const { data: macro } = useSWR('/api/macro-metrics', fetcher);
   const { data: flows } = useSWR('/api/industry-flows', fetcher);
+  const { data: risk } = useSWR('/api/portfolio-risk', fetcher);
   const [capital, setCapital] = useState(10000);
 
   const metrics = portfolio
@@ -67,6 +76,13 @@ export default function HomePage() {
       {flows && <IndustryFlowDashboard flows={flows} />}
       {portfolio && <RiskDashboard signals={signals || []} holdings={portfolio.holdings} />}
       {assetMetrics && <AssetMetricsTable metrics={assetMetrics} />}
+      {risk && (
+        <PortfolioVaRChart returns={risk.returns} varValue={risk.var} />
+      )}
+      {risk &&
+        risk.projections.map((p: { symbol: string; path: number[] }) => (
+          <OptionProjectionChart key={p.symbol} symbol={p.symbol} prices={p.path} />
+        ))}
     </div>
   );
 }
