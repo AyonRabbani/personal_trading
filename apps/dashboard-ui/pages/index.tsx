@@ -17,6 +17,10 @@ const MetricsSummary = dynamic(
   () => import('@workspace/ui-components/MetricsSummary'),
   { ssr: false }
 );
+const AssetMetricsTable = dynamic(
+  () => import('@workspace/ui-components/AssetMetricsTable'),
+  { ssr: false }
+);
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -25,6 +29,7 @@ export default function HomePage() {
     refreshInterval: 60000,
   });
   const { data: portfolio } = useSWR('/api/portfolio', fetcher);
+  const { data: assetMetrics } = useSWR('/api/asset-metrics', fetcher);
   const [capital, setCapital] = useState(10000);
 
   const metrics = portfolio
@@ -49,6 +54,7 @@ export default function HomePage() {
       )}
       {metrics.length > 0 && <MetricsSummary metrics={metrics} />}
       {portfolio && <RiskDashboard signals={signals || []} holdings={portfolio.holdings} />}
+      {assetMetrics && <AssetMetricsTable metrics={assetMetrics} />}
     </div>
   );
 }
