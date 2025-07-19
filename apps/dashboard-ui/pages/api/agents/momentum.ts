@@ -1,9 +1,10 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { registerPolygonProvider, getMarketData } from '@workspace/data-providers/polygon';
 import { MomentumAgent } from '@workspace/agents/momentum';
+import { assetSymbols } from '@workspace/assets';
 
 // Symbols the agent should monitor.
-registerPolygonProvider({ symbols: ['AAPL', 'BTCUSD', 'ETHUSD'] });
+registerPolygonProvider({ symbols: assetSymbols });
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
