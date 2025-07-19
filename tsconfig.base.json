@@ -17,6 +17,7 @@
       "@workspace/*": ["libs/*"],
       "@workspace/agents/*": ["libs/agents/*"],
       "@workspace/data-providers/*": ["libs/data-providers/*"],
+      "@workspace/assets/*": ["libs/assets/*"],
       "@workspace/risk/*": ["libs/risk/*"],
       "@workspace/ui-components/*": ["libs/ui-components/*"]
     }
