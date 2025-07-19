@@ -1,0 +1,17 @@
+body {
+  background-color: #000;
+  color: #33ff33;
+  font-family: "Courier New", Courier, monospace;
+}
+
+table, th, td {
+  border-color: #33ff33;
+}
+
+.bg-gray-100, .bg-gray-50, .bg-white {
+  background-color: #000 !important;
+}
+
+.text-gray-500 {
+  color: #33ff33 !important;
+}
