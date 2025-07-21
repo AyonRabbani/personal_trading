@@ -37,11 +37,18 @@ const OptionProjectionChart = dynamic(
   () => import('@workspace/ui-components/OptionProjectionChart'),
   { ssr: false }
 );
+const CashParkingTable = dynamic(
+  () => import('@workspace/ui-components/CashParkingTable'),
+  { ssr: false }
+);
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function HomePage() {
   const { data: signals } = useSWR('/api/agents/momentum', fetcher, {
+    refreshInterval: 60000,
+  });
+  const { data: parking } = useSWR('/api/cash-parking', fetcher, {
     refreshInterval: 60000,
   });
   const { data: portfolio } = useSWR('/api/portfolio', fetcher);
@@ -50,6 +57,7 @@ export default function HomePage() {
   const { data: flows } = useSWR('/api/industry-flows', fetcher);
   const { data: risk } = useSWR('/api/portfolio-risk', fetcher);
   const [capital, setCapital] = useState(10000);
+  const [tab, setTab] = useState<'parking' | 'overview' | 'risk'>('parking');
 
   const metrics = portfolio
     ? [
@@ -62,27 +70,64 @@ export default function HomePage() {
 
   return (
     <div className="p-4 space-y-6">
-      <h1 className="text-2xl font-bold">Momentum Signals</h1>
-      <SignalList signals={signals || []} availableCapital={capital} />
-      {portfolio && (
-        <PortfolioOverview
-          holdings={portfolio.holdings}
-          cash={portfolio.cash}
-          metrics={portfolio.metrics}
-        />
+      <div className="border-b mb-4 flex space-x-4">
+        <button
+          className={`pb-1 ${tab === 'parking' ? 'border-b-2 font-semibold' : 'text-gray-500'}`}
+          onClick={() => setTab('parking')}
+        >
+          Cash Parking
+        </button>
+        <button
+          className={`pb-1 ${tab === 'overview' ? 'border-b-2 font-semibold' : 'text-gray-500'}`}
+          onClick={() => setTab('overview')}
+        >
+          Overview
+        </button>
+        <button
+          className={`pb-1 ${tab === 'risk' ? 'border-b-2 font-semibold' : 'text-gray-500'}`}
+          onClick={() => setTab('risk')}
+        >
+          Risk
+        </button>
+      </div>
+
+      {tab === 'parking' && (
+        <div className="space-y-4">
+          <h1 className="text-2xl font-bold">30 Day Cash Parking</h1>
+          {parking && <CashParkingTable data={parking} />}
+        </div>
       )}
-      {metrics.length > 0 && <MetricsSummary metrics={metrics} />}
-      {macro && <MacroMetrics metrics={macro.metrics} />}
-      {flows && <IndustryFlowDashboard flows={flows} />}
-      {portfolio && <RiskDashboard signals={signals || []} holdings={portfolio.holdings} />}
-      {assetMetrics && <AssetMetricsTable metrics={assetMetrics} />}
-      {risk && (
-        <PortfolioVaRChart returns={risk.returns} varValue={risk.var} />
+
+      {tab === 'overview' && (
+        <div className="space-y-4">
+          <h1 className="text-2xl font-bold">Momentum Signals</h1>
+          <SignalList signals={signals || []} availableCapital={capital} />
+          {portfolio && (
+            <PortfolioOverview
+              holdings={portfolio.holdings}
+              cash={portfolio.cash}
+              metrics={portfolio.metrics}
+            />
+          )}
+          {metrics.length > 0 && <MetricsSummary metrics={metrics} />}
+          {macro && <MacroMetrics metrics={macro.metrics} />}
+          {flows && <IndustryFlowDashboard flows={flows} />}
+          {assetMetrics && <AssetMetricsTable metrics={assetMetrics} />}
+        </div>
       )}
-      {risk &&
-        risk.projections.map((p: { symbol: string; path: number[] }) => (
-          <OptionProjectionChart key={p.symbol} symbol={p.symbol} prices={p.path} />
-        ))}
+
+      {tab === 'risk' && (
+        <div className="space-y-4">
+          {portfolio && <RiskDashboard signals={signals || []} holdings={portfolio.holdings} />}
+          {risk && (
+            <PortfolioVaRChart returns={risk.returns} varValue={risk.var} />
+          )}
+          {risk &&
+            risk.projections.map((p: { symbol: string; path: number[] }) => (
+              <OptionProjectionChart key={p.symbol} symbol={p.symbol} prices={p.path} />
+            ))}
+        </div>
+      )}
     </div>
   );
 }
