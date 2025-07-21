@@ -2,19 +2,21 @@ export interface Asset {
   symbol: string;
   name: string;
   type: 'equity' | 'crypto' | 'derivative';
+  /** Optional industry classification used for equity screening */
+  industry?: string;
 }
 
 export const assets: Asset[] = [
-  { symbol: 'AAPL', name: 'Apple Inc.', type: 'equity' },
-  { symbol: 'MSFT', name: 'Microsoft Corp.', type: 'equity' },
-  { symbol: 'AMZN', name: 'Amazon.com Inc.', type: 'equity' },
-  { symbol: 'GOOG', name: 'Alphabet Inc.', type: 'equity' },
-  { symbol: 'TSLA', name: 'Tesla Inc.', type: 'equity' },
-  { symbol: 'META', name: 'Meta Platforms Inc.', type: 'equity' },
-  { symbol: 'NVDA', name: 'NVIDIA Corp.', type: 'equity' },
-  { symbol: 'JPM', name: 'JPMorgan Chase & Co.', type: 'equity' },
-  { symbol: 'V', name: 'Visa Inc.', type: 'equity' },
-  { symbol: 'JNJ', name: 'Johnson & Johnson', type: 'equity' },
+  { symbol: 'AAPL', name: 'Apple Inc.', type: 'equity', industry: 'Technology' },
+  { symbol: 'MSFT', name: 'Microsoft Corp.', type: 'equity', industry: 'Technology' },
+  { symbol: 'AMZN', name: 'Amazon.com Inc.', type: 'equity', industry: 'Consumer' },
+  { symbol: 'GOOG', name: 'Alphabet Inc.', type: 'equity', industry: 'Technology' },
+  { symbol: 'TSLA', name: 'Tesla Inc.', type: 'equity', industry: 'Consumer' },
+  { symbol: 'META', name: 'Meta Platforms Inc.', type: 'equity', industry: 'Technology' },
+  { symbol: 'NVDA', name: 'NVIDIA Corp.', type: 'equity', industry: 'Technology' },
+  { symbol: 'JPM', name: 'JPMorgan Chase & Co.', type: 'equity', industry: 'Finance' },
+  { symbol: 'V', name: 'Visa Inc.', type: 'equity', industry: 'Finance' },
+  { symbol: 'JNJ', name: 'Johnson & Johnson', type: 'equity', industry: 'Healthcare' },
 
   { symbol: 'BTCUSD', name: 'Bitcoin', type: 'crypto' },
   { symbol: 'ETHUSD', name: 'Ethereum', type: 'crypto' },
@@ -30,3 +32,6 @@ export const assets: Asset[] = [
 ];
 
 export const assetSymbols = assets.map((a) => a.symbol);
+export const equitySymbols = assets
+  .filter((a) => a.type === 'equity')
+  .map((a) => a.symbol);
