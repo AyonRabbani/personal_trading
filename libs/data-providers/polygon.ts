@@ -19,7 +19,7 @@ export interface MarketData {
 }
 
 // Default key used when POLYGON_API_KEY is not set
-const DEFAULT_POLYGON_API_KEY = 'Z2zYpeDRaQiuiy5mnPjYEyLjo0DCd8A5';
+export const DEFAULT_POLYGON_API_KEY = 'Z2zYpeDRaQiuiy5mnPjYEyLjo0DCd8A5';
 
 let symbols: string[] = [];
 
