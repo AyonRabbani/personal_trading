@@ -22,13 +22,11 @@ export async function getMacroSeries(): Promise<MacroSeries[]> {
   const results: MacroSeries[] = [];
 
   if (!process.env.FRED_API_KEY) {
-    // Generate dummy series
+    // Generate dummy series using constant value 1
     for (const [name, id] of Object.entries(series)) {
       const data: Array<{ date: string; value: number }> = [];
-      let value = 100 + Math.random() * 10;
       for (let d = start.getTime(); d <= end.getTime(); d += 24 * 60 * 60 * 1000) {
-        value += (Math.random() - 0.5) * 2;
-        data.push({ date: new Date(d).toISOString().split('T')[0], value });
+        data.push({ date: new Date(d).toISOString().split('T')[0], value: 1 });
       }
       results.push({ name, id, data });
     }
