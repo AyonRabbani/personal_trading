@@ -12,7 +12,7 @@ export async function fetchNewsScores(symbols: string[]): Promise<Record<string,
   // In production connect to a real service.
   const scores: Record<string, NewsScore> = {};
   for (const s of symbols) {
-    scores[s] = { symbol: s, sentiment: Math.random() * 2 - 1, macro: Math.random() };
+    scores[s] = { symbol: s, sentiment: 1, macro: 1 };
   }
   return scores;
 }

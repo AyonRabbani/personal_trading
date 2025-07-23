@@ -12,9 +12,11 @@
     "start": "nx serve dashboard-ui",
     "lint": "nx lint",
     "show-momentum": "tsx scripts/show-momentum.ts",
-    "rank-assets": "tsx scripts/rank-assets.ts"
+    "rank-assets": "tsx scripts/rank-assets.ts",
+    "list-tickers": "tsx scripts/list-tickers.ts"
   },
   "dependencies": {
+    "@polygon.io/client-js": "^7.2.6",
     "next": "15.4.2",
     "react": "19.1.0",
     "react-dom": "19.1.0",

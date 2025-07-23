@@ -18,6 +18,9 @@ export interface MarketData {
   volume: number;
 }
 
+// Default key used when POLYGON_API_KEY is not set
+const DEFAULT_POLYGON_API_KEY = 'Z2zYpeDRaQiuiy5mnPjYEyLjo0DCd8A5';
+
 let symbols: string[] = [];
 
 /**
@@ -37,25 +40,26 @@ export async function getMarketData(): Promise<MarketData[]> {
   const start = new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000);
   const results: MarketData[] = [];
 
-  // If no API key is provided, fall back to generating random data so the UI can
+  // If no API key is provided, fall back to dummy values of 1 so the UI can
   // run without external dependencies.
   if (!process.env.POLYGON_API_KEY) {
     for (const sym of symbols) {
-      let price = 100 + Math.random() * 50;
       for (let d = start.getTime(); d <= end.getTime(); d += 24 * 60 * 60 * 1000) {
-        const open = price;
-        const close = open + (Math.random() - 0.5) * 2;
-        const high = Math.max(open, close) + Math.random();
-        const low = Math.min(open, close) - Math.random();
-        const volume = Math.floor(Math.random() * 1000 + 500);
-        results.push({ symbol: sym, timestamp: d, open, high, low, close, volume });
-        price = close;
+        results.push({
+          symbol: sym,
+          timestamp: d,
+          open: 1,
+          high: 1,
+          low: 1,
+          close: 1,
+          volume: 1,
+        });
       }
     }
     return results;
   }
 
-  const apiKey = process.env.POLYGON_API_KEY;
+  const apiKey = process.env.POLYGON_API_KEY || DEFAULT_POLYGON_API_KEY;
   const startStr = start.toISOString().split('T')[0];
   const endStr = end.toISOString().split('T')[0];
 

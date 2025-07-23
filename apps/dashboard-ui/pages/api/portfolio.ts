@@ -28,7 +28,7 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
 
   const metrics = {
     totalValue: marketValue,
-    dailyChange: (Math.random() - 0.5) * 200, // random daily P/L
+    dailyChange: 1,
     totalReturn: ((marketValue - totalCost) / totalCost) * 100,
   };
 

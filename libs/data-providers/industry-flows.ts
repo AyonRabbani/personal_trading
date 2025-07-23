@@ -22,10 +22,9 @@ export async function getIndustryFlows(): Promise<IndustryFlow[]> {
   for (const [name, subs] of Object.entries(industryMap)) {
     const subIndustries: SubIndustryFlow[] = subs.map((s) => ({
       name: s,
-      flow: Math.random() * 2 - 1,
+      flow: 1,
     }));
-    const flow =
-      subIndustries.reduce((sum, s) => sum + s.flow, 0) / subIndustries.length;
+    const flow = 1;
     results.push({ name, flow, subIndustries });
   }
   return results;
