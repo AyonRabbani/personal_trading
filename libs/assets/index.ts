@@ -35,3 +35,13 @@ export const assetSymbols = assets.map((a) => a.symbol);
 export const equitySymbols = assets
   .filter((a) => a.type === 'equity')
   .map((a) => a.symbol);
+
+export interface Sp500Entry {
+  symbol: string;
+  name: string;
+  industry: string;
+}
+
+import sp500Data from './sp500.json';
+export const sp500: Sp500Entry[] = sp500Data as Sp500Entry[];
+export const sp500Symbols = sp500.map((s) => s.symbol);
