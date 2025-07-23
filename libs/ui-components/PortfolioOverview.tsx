@@ -4,6 +4,7 @@ export interface Holding {
   symbol: string;
   quantity: number;
   costBasis: number;
+  purchaseDate?: string;
   currentPrice: number;
 }
 
@@ -52,20 +53,22 @@ export default function PortfolioOverview({
               <th className="px-2 py-1 text-left">Qty</th>
               <th className="px-2 py-1 text-left">Cost</th>
               <th className="px-2 py-1 text-left">Price</th>
+              <th className="px-2 py-1 text-left">Date</th>
             </tr>
           </thead>
           <tbody>
             {holdings.map((h) => (
-              <tr key={h.symbol} className="border-t">
+              <tr key={h.symbol + h.purchaseDate} className="border-t">
                 <td className="px-2 py-1">{h.symbol}</td>
                 <td className="px-2 py-1">{h.quantity}</td>
                 <td className="px-2 py-1">{h.costBasis.toFixed(2)}</td>
                 <td className="px-2 py-1">{h.currentPrice.toFixed(2)}</td>
+                <td className="px-2 py-1">{h.purchaseDate}</td>
               </tr>
             ))}
             <tr className="border-t font-semibold">
               <td className="px-2 py-1">Cash</td>
-              <td className="px-2 py-1" colSpan={3}>${cash.toFixed(2)}</td>
+              <td className="px-2 py-1" colSpan={4}>${cash.toFixed(2)}</td>
             </tr>
           </tbody>
         </table>

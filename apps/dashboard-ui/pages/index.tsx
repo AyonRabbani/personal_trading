@@ -41,6 +41,10 @@ const CashParkingTable = dynamic(
   () => import('@workspace/ui-components/CashParkingTable'),
   { ssr: false }
 );
+const PortfolioForm = dynamic(
+  () => import('@workspace/ui-components/PortfolioForm'),
+  { ssr: false }
+);
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -69,8 +73,9 @@ export default function HomePage() {
     : [];
 
   return (
-    <div className="p-4 space-y-6">
-      <div className="border-b mb-4 flex space-x-4">
+    <div className="min-h-screen flex justify-center">
+      <div className="w-full max-w-4xl p-4 space-y-6">
+      <div className="border-b mb-4 flex space-x-4 justify-center">
         <button
           className={`pb-1 ${tab === 'parking' ? 'border-b-2 font-semibold' : 'text-gray-500'}`}
           onClick={() => setTab('parking')}
@@ -100,7 +105,9 @@ export default function HomePage() {
 
       {tab === 'overview' && (
         <div className="space-y-4">
-          <h1 className="text-2xl font-bold">Momentum Signals</h1>
+          <h1 className="text-2xl font-bold text-center">Manage Portfolio</h1>
+          <PortfolioForm />
+          <h2 className="text-2xl font-bold">Momentum Signals</h2>
           <SignalList signals={signals || []} availableCapital={capital} />
           {portfolio && (
             <PortfolioOverview
@@ -128,6 +135,7 @@ export default function HomePage() {
             ))}
         </div>
       )}
+      </div>
     </div>
   );
 }
