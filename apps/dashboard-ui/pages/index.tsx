@@ -1,4 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import PriceHistoryChart from '@workspace/ui-components/PriceHistoryChart';
+import PortfolioVaRChart from '@workspace/ui-components/PortfolioVaRChart';
+import { portfolioVaR, Position } from '@workspace/risk/var';
 
 interface PriceHistory {
   symbol: string;
@@ -8,6 +11,8 @@ interface PriceHistory {
 export default function HomePage() {
   const [ticker, setTicker] = useState('');
   const [portfolio, setPortfolio] = useState<PriceHistory[]>([]);
+  const [varValue, setVarValue] = useState(0);
+  const [returns, setReturns] = useState<number[]>([]);
 
   const addTicker = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,6 +26,37 @@ export default function HomePage() {
       // ignore errors for simplicity
     }
   };
+
+  useEffect(() => {
+    if (portfolio.length === 0) {
+      setVarValue(0);
+      setReturns([]);
+      return;
+    }
+    const minLen = Math.min(...portfolio.map((p) => p.prices.length));
+    if (minLen < 2) {
+      setVarValue(0);
+      setReturns([]);
+      return;
+    }
+    const positions: Position[] = portfolio.map((p) => ({
+      quantity: 1,
+      prices: p.prices.slice(-minLen).map((x) => x.c),
+    }));
+    const v = portfolioVaR(positions, 0.95);
+    setVarValue(v);
+    const n = positions[0].prices.length;
+    const values: number[] = [];
+    for (let i = 0; i < n; i++) {
+      const val = positions.reduce((sum, pos) => sum + pos.prices[i] * pos.quantity, 0);
+      values.push(val);
+    }
+    const rets: number[] = [];
+    for (let i = 1; i < values.length; i++) {
+      rets.push((values[i] - values[i - 1]) / values[i - 1]);
+    }
+    setReturns(rets);
+  }, [portfolio]);
 
   return (
     <div className="p-4 space-y-4">
@@ -36,13 +72,18 @@ export default function HomePage() {
           Add
         </button>
       </form>
-      <ul className="space-y-2">
+      <div className="grid gap-4 md:grid-cols-2">
         {portfolio.map((item) => (
-          <li key={item.symbol} className="border p-2">
-            <strong>{item.symbol}</strong> - {item.prices.length} days loaded
-          </li>
+          <PriceHistoryChart
+            key={item.symbol}
+            symbol={item.symbol}
+            prices={item.prices.map((p) => p.c)}
+          />
         ))}
-      </ul>
+      </div>
+      {returns.length > 0 && (
+        <PortfolioVaRChart returns={returns} varValue={varValue} />
+      )}
     </div>
   );
 }
