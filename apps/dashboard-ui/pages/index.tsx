@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import PriceHistoryChart from '@workspace/ui-components/PriceHistoryChart';
 import PortfolioVaRChart from '@workspace/ui-components/PortfolioVaRChart';
+import PortfolioMetricChart from '@workspace/ui-components/PortfolioMetricChart';
 import { portfolioVaR, Position } from '@workspace/risk/var';
 
 interface PriceHistory {
@@ -13,6 +14,9 @@ export default function HomePage() {
   const [portfolio, setPortfolio] = useState<PriceHistory[]>([]);
   const [varValue, setVarValue] = useState(0);
   const [returns, setReturns] = useState<number[]>([]);
+  const [values, setValues] = useState<number[]>([]);
+  const [momentum, setMomentum] = useState<number[]>([]);
+  const [volatility, setVolatility] = useState<number[]>([]);
 
   const addTicker = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,25 +41,43 @@ export default function HomePage() {
     if (minLen < 2) {
       setVarValue(0);
       setReturns([]);
+      setValues([]);
+      setMomentum([]);
+      setVolatility([]);
       return;
     }
+    const days = Math.min(30, minLen);
     const positions: Position[] = portfolio.map((p) => ({
       quantity: 1,
-      prices: p.prices.slice(-minLen).map((x) => x.c),
+      prices: p.prices.slice(-days).map((x) => x.c),
     }));
     const v = portfolioVaR(positions, 0.95);
     setVarValue(v);
     const n = positions[0].prices.length;
-    const values: number[] = [];
+    const vals: number[] = [];
     for (let i = 0; i < n; i++) {
       const val = positions.reduce((sum, pos) => sum + pos.prices[i] * pos.quantity, 0);
-      values.push(val);
+      vals.push(val);
     }
+    setValues(vals);
+
     const rets: number[] = [];
-    for (let i = 1; i < values.length; i++) {
-      rets.push((values[i] - values[i - 1]) / values[i - 1]);
+    for (let i = 1; i < vals.length; i++) {
+      rets.push((vals[i] - vals[i - 1]) / vals[i - 1]);
     }
     setReturns(rets);
+
+    const mom: number[] = vals.map((v) => (v - vals[0]) / vals[0]);
+    setMomentum(mom);
+
+    const vol: number[] = [0];
+    for (let i = 1; i < rets.length + 1; i++) {
+      const slice = rets.slice(0, i);
+      const mean = slice.reduce((a, b) => a + b, 0) / slice.length;
+      const variance = slice.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / slice.length;
+      vol.push(Math.sqrt(variance));
+    }
+    setVolatility(vol);
   }, [portfolio]);
 
   return (
@@ -82,7 +104,18 @@ export default function HomePage() {
         ))}
       </div>
       {returns.length > 0 && (
-        <PortfolioVaRChart returns={returns} varValue={varValue} />
+        <>
+          <PortfolioVaRChart returns={returns} varValue={varValue} />
+          <div className="grid gap-4 md:grid-cols-3">
+            <PortfolioMetricChart title="Portfolio Value" values={values} />
+            <PortfolioMetricChart title="Momentum" values={momentum} />
+            <PortfolioMetricChart title="Volatility" values={volatility} />
+          </div>
+          <div className="text-sm text-gray-600">
+            Momentum is the percentage change in total value from the purchase date.
+            Volatility is the standard deviation of daily portfolio returns since purchase.
+          </div>
+        </>
       )}
     </div>
   );
