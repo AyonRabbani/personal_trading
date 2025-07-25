@@ -1,3 +1,7 @@
+
+'use client';
+=======
+
 import { useState } from "react";
 
 export interface StockRow {
@@ -21,7 +25,16 @@ export default function ScreenerTable({
 }) {
   const [sortKey, setSortKey] = useState<keyof StockRow>("ret5d");
 
+
+  const sorted = [...MOCK_DATA].sort((a, b) => {
+    if (sortKey === "ticker") {
+      return a.ticker.localeCompare(b.ticker);
+    }
+    return (b[sortKey] as number) - (a[sortKey] as number);
+  });
+=======
   const sorted = [...MOCK_DATA].sort((a, b) => b[sortKey] - a[sortKey]);
+
 
   return (
     <table className="min-w-full text-sm">
