@@ -1,39 +1,24 @@
 {
-  "name": "personal_trading",
+  "name": "temp-nextjs",
   "version": "0.1.0",
   "private": true,
-  "workspaces": [
-    "apps/*",
-    "libs/*"
-  ],
   "scripts": {
-    "dev": "nx serve dashboard-ui",
-    "build": "nx build dashboard-ui",
-    "start": "nx serve dashboard-ui",
-    "lint": "nx lint",
-    "show-momentum": "tsx scripts/show-momentum.ts",
-    "rank-assets": "tsx scripts/rank-assets.ts",
-    "list-tickers": "tsx scripts/list-tickers.ts"
+    "dev": "next dev --turbopack",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
   },
   "dependencies": {
-    "@polygon.io/client-js": "^7.2.6",
-    "next": "15.4.2",
     "react": "19.1.0",
     "react-dom": "19.1.0",
-    "swr": "^2.3.4"
+    "next": "15.4.4"
   },
   "devDependencies": {
-    "@eslint/eslintrc": "^3",
-    "@nx/next": "18.2.0",
-    "@tailwindcss/postcss": "^4",
+    "typescript": "^5",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "15.4.2",
-    "nx": "18.2.0",
-    "tailwindcss": "^4",
-    "tsx": "^4.20.3",
-    "typescript": "^5"
+    "@tailwindcss/postcss": "^4",
+    "tailwindcss": "^4"
   }
 }

@@ -1,7 +1,0 @@
-{
-  "npmScope": "workspace",
-  "workspaceLayout": {
-    "appsDir": "apps",
-    "libsDir": "libs"
-  }
-}
