@@ -1,4 +1,7 @@
+
 "use client";
+=======
+
 import { useEffect, useState } from "react";
 import { fetchOptionsSnapshot } from "../lib/polygon";
 
