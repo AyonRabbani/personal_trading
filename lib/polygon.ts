@@ -1,33 +1,23 @@
-export const POLYGON_API_KEY = "Z2zYpeDRaQiuiy5mnPjYEyLjo0DCd8A5";
-const BASE_URL = "https://api.polygon.io";
+const BASE_URL = 'https://api.polygon.io';
 
-export async function fetchAggregates(
-  ticker: string,
-  from: string,
-  to: string
-) {
-  const url = `${BASE_URL}/v2/aggs/ticker/${ticker}/range/1/day/${from}/${to}?apiKey=${POLYGON_API_KEY}`;
-  const res = await fetch(url);
-  if (!res.ok) {
-    throw new Error(`Failed to fetch aggregates for ${ticker}`);
+export async function polygonFetch(path: string, params: Record<string, string | number> = {}) {
+  const url = new URL(`${BASE_URL}${path}`);
+  Object.entries(params).forEach(([key, value]) => {
+    url.searchParams.append(key, String(value));
+  });
+  const apiKey = process.env.POLYGON_API_KEY;
+  if (!apiKey) {
+    throw new Error('Missing POLYGON_API_KEY');
   }
-  return res.json();
-}
-
-export async function fetchLastTrade(ticker: string) {
-  const url = `${BASE_URL}/v2/last/trade/${ticker}?apiKey=${POLYGON_API_KEY}`;
-  const res = await fetch(url);
+  const res = await fetch(url.toString(), {
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+    },
+    // Next.js edge runtime fetch will cache automatically; override as needed
+    cache: 'no-store',
+  });
   if (!res.ok) {
-    throw new Error(`Failed to fetch last trade for ${ticker}`);
-  }
-  return res.json();
-}
-
-export async function fetchOptionsSnapshot(ticker: string) {
-  const url = `${BASE_URL}/v3/snapshot/options/${ticker}?apiKey=${POLYGON_API_KEY}`;
-  const res = await fetch(url);
-  if (!res.ok) {
-    throw new Error(`Failed to fetch options snapshot for ${ticker}`);
+    throw new Error(`Polygon error: ${res.status}`);
   }
   return res.json();
 }

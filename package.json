@@ -1,24 +1,34 @@
 {
-  "name": "temp-nextjs",
+  "name": "defined-risk-screener",
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test": "vitest run"
   },
   "dependencies": {
-    "react": "19.1.0",
-    "react-dom": "19.1.0",
-    "next": "15.4.4"
+    "@headlessui/react": "^1.7.15",
+    "@tanstack/react-query": "^5.0.0",
+    "clsx": "^2.0.0",
+    "next": "14.1.0",
+    "react": "18.2.0",
+    "react-dom": "18.2.0"
   },
   "devDependencies": {
-    "typescript": "^5",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "@tailwindcss/postcss": "^4",
-    "tailwindcss": "^4"
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.0.0",
+    "@types/react-dom": "^18.0.0",
+    "autoprefixer": "^10.4.16",
+    "eslint": "^8.57.0",
+    "eslint-config-next": "14.1.0",
+    "eslint-config-prettier": "^10.1.8",
+    "postcss": "^8.4.35",
+    "prettier": "^3.1.0",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5.0.0",
+    "vitest": "^1.2.0"
   }
 }
