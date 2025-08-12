@@ -1,19 +1,42 @@
 'use client';
-import { useState } from 'react';
-import ScreenerTable from '../components/ScreenerTable';
-import OptionsViewer from '../components/OptionsViewer';
 
-export default function Home() {
-  const [selected, setSelected] = useState<string | null>(null);
+import { useState } from 'react';
+import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
+import Filters from '@/components/Filters';
+import ResultsTable, { Result } from '@/components/ResultsTable';
+import PositionDrawer from '@/components/PositionDrawer';
+
+const queryClient = new QueryClient();
+
+function Screener() {
+  const [symbol, setSymbol] = useState('AAPL');
+  const [selected, setSelected] = useState<Result | null>(null);
+
+  const { data } = useQuery<{ results: Result[] }>({
+    queryKey: ['screen', symbol],
+    queryFn: async () => {
+      const res = await fetch('/api/screen', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ symbol }),
+      });
+      return res.json();
+    },
+  });
 
   return (
-    <div className="min-h-screen p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div>
-        <ScreenerTable onSelect={(t) => setSelected(t)} />
-      </div>
-      <div>
-        <OptionsViewer ticker={selected} />
-      </div>
+    <div>
+      <Filters symbol={symbol} onSymbolChange={setSymbol} />
+      <ResultsTable results={data?.results ?? []} onSelect={setSelected} />
+      <PositionDrawer position={selected} onClose={() => setSelected(null)} />
     </div>
+  );
+}
+
+export default function Page() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <Screener />
+    </QueryClientProvider>
   );
 }
