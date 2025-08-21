@@ -1,7 +1,0 @@
-{
-  "legs": [
-    { "side": "short", "strike": 100, "bid": 1.0, "ask": 1.1 },
-    { "side": "long", "strike": 95, "bid": 0.2, "ask": 0.25 }
-  ],
-  "dte": 30
-}
