@@ -41,9 +41,10 @@ export default function CrossSectionalChart({ labels, matrix }: Props) {
         backgroundColor: (ctx: ScriptableContext<'matrix'>) => {
           const value = (ctx.raw as { v: number }).v;
           const alpha = Math.abs(value);
+          // Bloomberg-style colors: green for positive, red for negative
           return value >= 0
-            ? `rgba(75, 192, 192, ${alpha})`
-            : `rgba(255, 99, 132, ${alpha})`;
+            ? `rgba(0, 255, 0, ${alpha})`
+            : `rgba(255, 0, 0, ${alpha})`;
         },
       },
     ],
@@ -56,11 +57,21 @@ export default function CrossSectionalChart({ labels, matrix }: Props) {
         type: 'category',
         labels,
         offset: true,
+        ticks: {
+          color: '#00FF00',
+          font: { family: 'monospace' },
+        },
+        grid: { color: '#333' },
       },
       y: {
         type: 'category',
         labels: [...labels],
         offset: true,
+        ticks: {
+          color: '#00FF00',
+          font: { family: 'monospace' },
+        },
+        grid: { color: '#333' },
       },
     },
     plugins: {
@@ -73,9 +84,18 @@ export default function CrossSectionalChart({ labels, matrix }: Props) {
           },
           label: (ctx) => (ctx.raw as { v: number }).v.toFixed(2),
         },
+        titleFont: { family: 'monospace' },
+        bodyFont: { family: 'monospace' },
       },
     },
   };
 
-  return <Chart type="matrix" data={data} options={options} />;
+  return (
+    <Chart
+      type="matrix"
+      data={data}
+      options={options}
+      style={{ backgroundColor: '#000', fontFamily: 'monospace' }}
+    />
+  );
 }
