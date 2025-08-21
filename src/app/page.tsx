@@ -1,8 +1,11 @@
 import styles from './page.module.css';
-import { getTickerFlow, getTickerHistory } from '@/lib/polygon';
+import { getTickerFlow, getTickerHistory, type DailyBar } from '@/lib/polygon';
 import CashFlowChart from '@/components/CashFlowChart';
 import CashFlowTrendChart from '@/components/CashFlowTrendChart';
 import CorrelationChart from '@/components/CorrelationChart';
+import MomentumChart from '@/components/MomentumChart';
+import CrossSectionalChart from '@/components/CrossSectionalChart';
+import CorrelationTrendChart from '@/components/CorrelationTrendChart';
 
 export const revalidate = 0;
 
@@ -29,6 +32,8 @@ export default async function Home() {
 
   const labels = flows.map((f) => f.ticker);
   const values = flows.map((f) => f.data?.cashFlow ?? 0);
+  const maxFlow = Math.max(...values);
+  const normValues = values.map((v) => (maxFlow ? v / maxFlow : 0));
 
   const histories = await Promise.all(
     tickers.map((t) => getTickerHistory(t.ticker, 30))
@@ -39,6 +44,10 @@ export default async function Home() {
     label: tickers[i].ticker,
     data: h.map((d) => d.close * d.volume),
   }));
+
+  const momentumValues = histories.map((h) =>
+    h.length ? (h[h.length - 1].close - h[0].close) / h[0].close : 0
+  );
 
   function calcReturns(prices: number[]): number[] {
     const res: number[] = [];
@@ -66,12 +75,25 @@ export default async function Home() {
     return num / Math.sqrt(denA * denB);
   }
 
-  const spyReturns = calcReturns(histories[0].map((d) => d.close));
+  const returns = histories.map((h) => calcReturns(h.map((d) => d.close)));
+  const corrMatrix = returns.map((r1) => returns.map((r2) => corr(r1, r2)));
+
+  const spyReturns = returns[0];
   const corrLabels = tickers.slice(1).map((t) => t.ticker);
-  const corrValues = histories.slice(1).map((h) => {
-    const r = calcReturns(h.map((d) => d.close));
-    return corr(spyReturns, r);
-  });
+  const corrValues = returns.slice(1).map((r) => corr(spyReturns, r));
+
+  function corrWindow(a: DailyBar[], b: DailyBar[], days: number) {
+    const ra = calcReturns(a.slice(-days - 1).map((d) => d.close));
+    const rb = calcReturns(b.slice(-days - 1).map((d) => d.close));
+    return corr(ra, rb);
+  }
+
+  const windows = [30, 15, 5];
+  const windowLabels = windows.map((w) => `${w}d`);
+  const corrTrendDatasets = histories.slice(1).map((h, i) => ({
+    label: tickers[i + 1].ticker,
+    data: windows.map((w) => corrWindow(histories[0], h, w)),
+  }));
 
   return (
     <main className={styles.main}>
@@ -83,13 +105,20 @@ export default async function Home() {
       )}
       <p>
         Cash flow represents the dollar value traded for each ETF, calculated
-        as the previous day&apos;s closing price multiplied by its volume.
+        as the previous day&apos;s closing price multiplied by its volume. Values
+        are normalized between 0 and 1 for comparison.
       </p>
-      <CashFlowChart labels={labels} values={values} />
+      <CashFlowChart labels={labels} values={normValues} />
+      <h2>Momentum (30-Day)</h2>
+      <MomentumChart labels={labels} values={momentumValues} />
+      <h2>Cross-Sectional Correlation</h2>
+      <CrossSectionalChart labels={labels} matrix={corrMatrix} />
       <h2>30-Day Cash Flow Trend</h2>
       <CashFlowTrendChart labels={trendLabels} datasets={trendDatasets} />
       <h2>Correlation with SPY (30-Day Returns)</h2>
       <CorrelationChart labels={corrLabels} values={corrValues} />
+      <h2>Correlation Trends vs SPY</h2>
+      <CorrelationTrendChart labels={windowLabels} datasets={corrTrendDatasets} />
     </main>
   );
 }
