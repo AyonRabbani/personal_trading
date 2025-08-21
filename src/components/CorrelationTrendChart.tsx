@@ -22,6 +22,10 @@ ChartJS.register(
   Legend
 );
 
+ChartJS.defaults.color = '#00FF00';
+ChartJS.defaults.borderColor = '#333';
+ChartJS.defaults.font.family = 'monospace';
+
 interface Dataset {
   label: string;
   data: number[];
@@ -34,12 +38,12 @@ interface Props {
 
 export default function CorrelationTrendChart({ labels, datasets }: Props) {
   const colors = [
-    '#4bc0c0',
-    '#ff6384',
-    '#36a2eb',
-    '#ff9f40',
-    '#9966ff',
-    '#c9cbcf',
+    '#00ff00',
+    '#ffab00',
+    '#00bfff',
+    '#ff00ff',
+    '#ff3333',
+    '#ffff00',
   ];
 
   const data = {
@@ -55,7 +59,7 @@ export default function CorrelationTrendChart({ labels, datasets }: Props) {
   const options: ChartOptions<'line'> = {
     responsive: true,
     plugins: {
-      legend: { position: 'top' },
+      legend: { position: 'top', labels: { color: '#00FF00' } },
       tooltip: {
         callbacks: {
           label: (ctx: TooltipItem<'line'>) => ctx.parsed.y.toFixed(2),
@@ -63,12 +67,15 @@ export default function CorrelationTrendChart({ labels, datasets }: Props) {
       },
     },
     scales: {
+      x: { ticks: { color: '#00FF00' }, grid: { color: '#333' } },
       y: {
         min: -1,
         max: 1,
+        ticks: { color: '#00FF00' },
+        grid: { color: '#333' },
       },
     },
   };
 
-  return <Line data={data} options={options} />;
+  return <Line data={data} options={options} style={{ backgroundColor: '#000' }} />;
 }

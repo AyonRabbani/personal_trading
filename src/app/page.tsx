@@ -106,26 +106,46 @@ export default async function Home() {
   return (
     <main className={styles.main}>
       <h1>Cross-Sectional Cash Flow Tracker</h1>
-      {!process.env.POLYGON_API_KEY && (
-        <p>
-          Using default API key. Set <code>POLYGON_API_KEY</code> to override.
-        </p>
-      )}
       <p>
-        Cash flow represents the dollar value traded for each ETF, calculated
-        as the previous day&apos;s closing price multiplied by its volume. Values
-        are normalized between 0 and 1 for comparison.
+        Normalized cash flow for ticker <code>i</code> is
+        <code>CF_i = (close_i × volume_i)</code> scaled by the maximum across
+        tickers so the displayed value is <code>CF_i / max_j CF_j</code>.
       </p>
       <CashFlowChart labels={labels} values={normValues} />
       <h2>Momentum (30-Day)</h2>
+      <p>
+        Momentum measures the percentage change over 30 days:
+        <code>
+          (P<sub>t</sub> - P<sub>t-30</sub>) / P<sub>t-30</sub>
+        </code>
+        .
+      </p>
       <MomentumChart labels={labels} values={momentumValues} />
       <h2>Cross-Sectional Correlation</h2>
+      <p>
+        Daily returns are computed as
+        <code>
+          r<sub>t</sub> = (P<sub>t</sub> - P<sub>t-1</sub>) / P<sub>t-1</sub>
+        </code>
+        ; the matrix shows the Pearson correlation between each pair of ETFs.
+      </p>
       <CrossSectionalChart labels={labels} matrix={corrMatrix} />
       <h2>30-Day Cash Flow Trend</h2>
+      <p>
+        Each line depicts <code>P_t × V_t</code> for the past 30 trading days,
+        illustrating how cash flow evolves through time.
+      </p>
       <CashFlowTrendChart labels={trendLabels} datasets={trendDatasets} />
       <h2>Correlation with SPY (30-Day Returns)</h2>
+      <p>
+        Pearson correlation between 30-day return series of each ETF and SPY.
+      </p>
       <CorrelationChart labels={corrLabels} values={corrValues} />
       <h2>Correlation Trends vs SPY</h2>
+      <p>
+        Rolling correlations with SPY over windows of 30, 15 and 5 days provide
+        a sense of short- and medium-term co-movement.
+      </p>
       <CorrelationTrendChart labels={windowLabels} datasets={corrTrendDatasets} />
     </main>
   );

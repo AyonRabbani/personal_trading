@@ -14,6 +14,10 @@ import { Bar } from 'react-chartjs-2';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
 
+ChartJS.defaults.color = '#00FF00';
+ChartJS.defaults.borderColor = '#333';
+ChartJS.defaults.font.family = 'monospace';
+
 interface Props {
   labels: string[];
   values: number[];
@@ -26,7 +30,9 @@ export default function CorrelationChart({ labels, values }: Props) {
       {
         label: 'Correlation with SPY',
         data: values,
-        backgroundColor: 'rgba(153, 102, 255, 0.5)',
+        backgroundColor: values.map((v) =>
+          v >= 0 ? 'rgba(0, 255, 0, 0.5)' : 'rgba(255, 0, 0, 0.5)'
+        ),
       },
     ],
   };
@@ -36,6 +42,7 @@ export default function CorrelationChart({ labels, values }: Props) {
     plugins: {
       legend: {
         position: 'top',
+        labels: { color: '#00FF00' },
       },
       tooltip: {
         callbacks: {
@@ -44,12 +51,15 @@ export default function CorrelationChart({ labels, values }: Props) {
       },
     },
     scales: {
+      x: { ticks: { color: '#00FF00' }, grid: { color: '#333' } },
       y: {
         min: -1,
         max: 1,
+        ticks: { color: '#00FF00' },
+        grid: { color: '#333' },
       },
     },
   };
 
-  return <Bar data={data} options={options} />;
+  return <Bar data={data} options={options} style={{ backgroundColor: '#000' }} />;
 }
