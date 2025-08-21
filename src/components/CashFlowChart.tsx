@@ -14,6 +14,11 @@ import { Bar } from 'react-chartjs-2';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
 
+// Bloomberg terminal style defaults
+ChartJS.defaults.color = '#00FF00';
+ChartJS.defaults.borderColor = '#333';
+ChartJS.defaults.font.family = 'monospace';
+
 interface Props {
   labels: string[];
   values: number[];
@@ -26,7 +31,7 @@ export default function CashFlowChart({ labels, values }: Props) {
       {
         label: 'Normalized Cash Flow',
         data: values,
-        backgroundColor: 'rgba(75, 192, 192, 0.5)',
+        backgroundColor: 'rgba(0, 255, 0, 0.5)',
       },
     ],
   };
@@ -36,6 +41,7 @@ export default function CashFlowChart({ labels, values }: Props) {
     plugins: {
       legend: {
         position: 'top',
+        labels: { color: '#00FF00' },
       },
       tooltip: {
         callbacks: {
@@ -44,16 +50,22 @@ export default function CashFlowChart({ labels, values }: Props) {
       },
     },
     scales: {
+      x: {
+        ticks: { color: '#00FF00' },
+        grid: { color: '#333' },
+      },
       y: {
         min: 0,
         max: 1,
         ticks: {
+          color: '#00FF00',
           callback: (value) => Number(value).toFixed(1),
         },
+        grid: { color: '#333' },
       },
     },
   };
 
-  return <Bar data={data} options={options} />;
+  return <Bar data={data} options={options} style={{ backgroundColor: '#000' }} />;
 }
 

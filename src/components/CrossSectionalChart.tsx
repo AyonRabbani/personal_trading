@@ -21,6 +21,10 @@ ChartJS.register(
   Legend
 );
 
+ChartJS.defaults.color = '#00FF00';
+ChartJS.defaults.borderColor = '#333';
+ChartJS.defaults.font.family = 'monospace';
+
 interface Props {
   labels: string[];
   matrix: number[][]; // matrix[i][j]
