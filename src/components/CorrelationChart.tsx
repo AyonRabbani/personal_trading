@@ -4,62 +4,100 @@ import {
   Chart as ChartJS,
   CategoryScale,
   LinearScale,
-  BarElement,
   Tooltip,
   Legend,
-  type TooltipItem,
   type ChartOptions,
+  type ScriptableContext,
 } from 'chart.js';
-import { Bar } from 'react-chartjs-2';
+import { MatrixController, MatrixElement } from 'chartjs-chart-matrix';
+import { Chart } from 'react-chartjs-2';
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
-
-ChartJS.defaults.color = '#00FF00';
-ChartJS.defaults.borderColor = '#333';
-ChartJS.defaults.font.family = 'monospace';
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  MatrixController,
+  MatrixElement,
+  Tooltip,
+  Legend
+);
 
 interface Props {
   labels: string[];
-  values: number[];
+  matrix: number[][]; // matrix[i][j]
 }
 
-export default function CorrelationChart({ labels, values }: Props) {
+export default function CorrelationChart({ labels, matrix }: Props) {
   const data = {
-    labels,
     datasets: [
       {
-        label: 'Correlation with SPY',
-        data: values,
-        backgroundColor: values.map((v) =>
-          v >= 0 ? 'rgba(0, 255, 0, 0.5)' : 'rgba(255, 0, 0, 0.5)'
+        label: 'Correlation Matrix',
+        data: labels.flatMap((_, y) =>
+          labels.map((_, x) => ({ x, y, v: matrix[y][x] }))
         ),
+        width: (ctx: ScriptableContext<'matrix'>) =>
+          ((ctx.chart.chartArea?.width ?? 0) / labels.length) - 1,
+        height: (ctx: ScriptableContext<'matrix'>) =>
+          ((ctx.chart.chartArea?.height ?? 0) / labels.length) - 1,
+        backgroundColor: (ctx: ScriptableContext<'matrix'>) => {
+          const value = (ctx.raw as { v: number }).v;
+          const normalized = (value + 1) / 2; // map [-1,1] -> [0,1]
+          const r = 255;
+          const g = Math.round(255 * normalized);
+          const b = 0;
+          const alpha = Math.abs(value);
+          return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        },
       },
     ],
   };
 
-  const options: ChartOptions<'bar'> = {
+  const options: ChartOptions<'matrix'> = {
     responsive: true,
-    plugins: {
-      legend: {
-        position: 'top',
-        labels: { color: '#00FF00' },
-      },
-      tooltip: {
-        callbacks: {
-          label: (ctx: TooltipItem<'bar'>) => ctx.parsed.y.toFixed(2),
+    scales: {
+      x: {
+        type: 'category',
+        labels,
+        offset: true,
+        ticks: {
+          color: '#FFA500',
+          font: { family: 'Helvetica' },
         },
+        grid: { color: '#333' },
+      },
+      y: {
+        type: 'category',
+        labels: [...labels],
+        offset: true,
+        ticks: {
+          color: '#FFA500',
+          font: { family: 'Helvetica' },
+        },
+        grid: { color: '#333' },
       },
     },
-    scales: {
-      x: { ticks: { color: '#00FF00' }, grid: { color: '#333' } },
-      y: {
-        min: -1,
-        max: 1,
-        ticks: { color: '#00FF00' },
-        grid: { color: '#333' },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          title: (items) => {
+            const item = items[0].raw as { x: number; y: number; v: number };
+            return `${labels[item.y]} vs ${labels[item.x]}`;
+          },
+          label: (ctx) => (ctx.raw as { v: number }).v.toFixed(2),
+        },
+        titleFont: { family: 'Helvetica' },
+        bodyFont: { family: 'Helvetica' },
       },
     },
   };
 
-  return <Bar data={data} options={options} style={{ backgroundColor: '#000' }} />;
+  return (
+    <Chart
+      type="matrix"
+      data={data}
+      options={options}
+      style={{ backgroundColor: '#000', fontFamily: 'Helvetica' }}
+    />
+  );
 }
+

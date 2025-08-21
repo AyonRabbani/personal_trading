@@ -4,7 +4,6 @@ import CashFlowChart from '@/components/CashFlowChart';
 import CashFlowTrendChart from '@/components/CashFlowTrendChart';
 import CorrelationChart from '@/components/CorrelationChart';
 import MomentumChart from '@/components/MomentumChart';
-import CrossSectionalChart from '@/components/CrossSectionalChart';
 import CorrelationTrendChart from '@/components/CorrelationTrendChart';
 
 export const revalidate = 0;
@@ -86,10 +85,6 @@ export default async function Home() {
     }
   }
 
-  const spyReturns = returns[0];
-  const corrLabels = tickers.slice(1).map((t) => t.ticker);
-  const corrValues = returns.slice(1).map((r) => corr(spyReturns, r));
-
   function corrWindow(a: DailyBar[], b: DailyBar[], days: number) {
     const ra = calcReturns(a.slice(-days - 1).map((d) => d.close));
     const rb = calcReturns(b.slice(-days - 1).map((d) => d.close));
@@ -129,18 +124,13 @@ export default async function Home() {
         </code>
         ; the matrix shows the Pearson correlation between each pair of ETFs.
       </p>
-      <CrossSectionalChart labels={labels} matrix={corrMatrix} />
+      <CorrelationChart labels={labels} matrix={corrMatrix} />
       <h2>30-Day Cash Flow Trend</h2>
       <p>
         Each line depicts <code>P_t × V_t</code> for the past 30 trading days,
         illustrating how cash flow evolves through time.
       </p>
       <CashFlowTrendChart labels={trendLabels} datasets={trendDatasets} />
-      <h2>Correlation with SPY (30-Day Returns)</h2>
-      <p>
-        Pearson correlation between 30-day return series of each ETF and SPY.
-      </p>
-      <CorrelationChart labels={corrLabels} values={corrValues} />
       <h2>Correlation Trends vs SPY</h2>
       <p>
         Rolling correlations with SPY over windows of 30, 15 and 5 days provide
