@@ -2,10 +2,10 @@ import styles from './page.module.css';
 import { getTickerFlow, getTickerHistory, type DailyBar } from '@/lib/polygon';
 import CashFlowChart from '@/components/CashFlowChart';
 import CashFlowTrendChart from '@/components/CashFlowTrendChart';
-import CorrelationChart from '@/components/CorrelationChart';
 import MomentumChart from '@/components/MomentumChart';
 import CorrelationTrendChart from '@/components/CorrelationTrendChart';
-import CorrelationTable from '@/components/CorrelationTable';
+import RollingCorrelationChart from '@/components/RollingCorrelationChart';
+import RisingCorrelationTable from '@/components/RisingCorrelationTable';
 
 export const revalidate = 0;
 
@@ -75,17 +75,6 @@ export default async function Home() {
     return num / Math.sqrt(denA * denB);
   }
 
-  const returns = histories.map((h) => calcReturns(h.map((d) => d.close)));
-  // Build full correlation matrix across all ETFs
-  const corrMatrix: number[][] = returns.map(() =>
-    Array(returns.length).fill(0)
-  );
-  for (let i = 0; i < returns.length; i++) {
-    for (let j = 0; j < returns.length; j++) {
-      corrMatrix[i][j] = corr(returns[i], returns[j]);
-    }
-  }
-
   function corrWindow(a: DailyBar[], b: DailyBar[], days: number) {
     const ra = calcReturns(a.slice(-days - 1).map((d) => d.close));
     const rb = calcReturns(b.slice(-days - 1).map((d) => d.close));
@@ -98,6 +87,21 @@ export default async function Home() {
     label: tickers[i + 1].ticker,
     data: windows.map((w) => corrWindow(histories[0], h, w)),
   }));
+
+  const pairRanks: { pair: string; corr30: number; corr5: number; change: number }[] = [];
+  for (let i = 0; i < histories.length; i++) {
+    for (let j = i + 1; j < histories.length; j++) {
+      const corr30 = corrWindow(histories[i], histories[j], 30);
+      const corr5 = corrWindow(histories[i], histories[j], 5);
+      pairRanks.push({
+        pair: `${tickers[i].ticker}-${tickers[j].ticker}`,
+        corr30,
+        corr5,
+        change: corr5 - corr30,
+      });
+    }
+  }
+  pairRanks.sort((a, b) => b.change - a.change);
 
   return (
     <main className={styles.main}>
@@ -117,18 +121,16 @@ export default async function Home() {
         .
       </p>
       <MomentumChart labels={labels} values={momentumValues} />
-      <h2>Cross-Sectional Correlation</h2>
+      <h2>Rolling Correlation Explorer</h2>
       <p>
-        Daily returns are computed as
-        <code>
-          r<sub>t</sub> = (P<sub>t</sub> - P<sub>t-1</sub>) / P<sub>t-1</sub>
-        </code>
-        ; the matrix shows the Pearson correlation between each pair of ETFs.
+        Select two tickers to view the 5-day rolling correlation of their
+        daily returns over the past 30 trading days.
       </p>
-        <CorrelationChart labels={labels} matrix={corrMatrix} />
-        <h2>Correlation Table</h2>
-        <CorrelationTable labels={labels} matrix={corrMatrix} />
-        <h2>30-Day Cash Flow Trend</h2>
+      <RollingCorrelationChart tickers={labels} histories={histories} />
+      <h2>Rising Correlation Rankings</h2>
+      <p>Pairs sorted by the change between their 30-day and 5-day correlations.</p>
+      <RisingCorrelationTable pairs={pairRanks} />
+      <h2>30-Day Cash Flow Trend</h2>
       <p>
         Each line depicts <code>P_t × V_t</code> for the past 30 trading days,
         illustrating how cash flow evolves through time.
