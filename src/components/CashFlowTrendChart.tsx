@@ -22,22 +22,34 @@ ChartJS.register(
   Legend
 );
 
-interface Props {
-  labels: string[];
-  values: number[];
+interface Dataset {
+  label: string;
+  data: number[];
 }
 
-export default function CashFlowTrendChart({ labels, values }: Props) {
+interface Props {
+  labels: string[];
+  datasets: Dataset[];
+}
+
+export default function CashFlowTrendChart({ labels, datasets }: Props) {
+  const colors = [
+    '#4bc0c0',
+    '#ff6384',
+    '#36a2eb',
+    '#ff9f40',
+    '#9966ff',
+    '#c9cbcf',
+  ];
+
   const data = {
     labels,
-    datasets: [
-      {
-        label: 'Daily Cash Flow',
-        data: values,
-        borderColor: 'rgba(75, 192, 192, 1)',
-        backgroundColor: 'rgba(75, 192, 192, 0.2)',
-      },
-    ],
+    datasets: datasets.map((d, i) => ({
+      label: d.label,
+      data: d.data,
+      borderColor: colors[i % colors.length],
+      backgroundColor: `${colors[i % colors.length]}33`,
+    })),
   };
 
   const options: ChartOptions<'line'> = {

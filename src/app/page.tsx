@@ -30,13 +30,15 @@ export default async function Home() {
   const labels = flows.map((f) => f.ticker);
   const values = flows.map((f) => f.data?.cashFlow ?? 0);
 
-  const spyHistory = await getTickerHistory('SPY', 30);
-  const trendLabels = spyHistory.map((d) => d.date);
-  const trendValues = spyHistory.map((d) => d.close * d.volume);
-
   const histories = await Promise.all(
     tickers.map((t) => getTickerHistory(t.ticker, 30))
   );
+
+  const trendLabels = histories[0].map((d) => d.date);
+  const trendDatasets = histories.map((h, i) => ({
+    label: tickers[i].ticker,
+    data: h.map((d) => d.close * d.volume),
+  }));
 
   function calcReturns(prices: number[]): number[] {
     const res: number[] = [];
@@ -84,8 +86,8 @@ export default async function Home() {
         as the previous day&apos;s closing price multiplied by its volume.
       </p>
       <CashFlowChart labels={labels} values={values} />
-      <h2>30-Day Cash Flow Trend (SPY)</h2>
-      <CashFlowTrendChart labels={trendLabels} values={trendValues} />
+      <h2>30-Day Cash Flow Trend</h2>
+      <CashFlowTrendChart labels={trendLabels} datasets={trendDatasets} />
       <h2>Correlation with SPY (30-Day Returns)</h2>
       <CorrelationChart labels={corrLabels} values={corrValues} />
     </main>
