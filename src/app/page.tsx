@@ -76,7 +76,15 @@ export default async function Home() {
   }
 
   const returns = histories.map((h) => calcReturns(h.map((d) => d.close)));
-  const corrMatrix = returns.map((r1) => returns.map((r2) => corr(r1, r2)));
+  // Build full correlation matrix across all ETFs
+  const corrMatrix: number[][] = returns.map(() =>
+    Array(returns.length).fill(0)
+  );
+  for (let i = 0; i < returns.length; i++) {
+    for (let j = 0; j < returns.length; j++) {
+      corrMatrix[i][j] = corr(returns[i], returns[j]);
+    }
+  }
 
   const spyReturns = returns[0];
   const corrLabels = tickers.slice(1).map((t) => t.ticker);
