@@ -7,6 +7,7 @@ import {
   Tooltip,
   Legend,
   type ChartOptions,
+  type ScriptableContext,
 } from 'chart.js';
 import { MatrixController, MatrixElement } from 'chartjs-chart-matrix';
 import { Chart } from 'react-chartjs-2';
@@ -33,12 +34,12 @@ export default function CrossSectionalChart({ labels, matrix }: Props) {
         data: labels.flatMap((_, y) =>
           labels.map((_, x) => ({ x, y, v: matrix[y][x] }))
         ),
-        width: ({ chart }) =>
-          (chart.chartArea ? chart.chartArea.width : 0) / labels.length - 1,
-        height: ({ chart }) =>
-          (chart.chartArea ? chart.chartArea.height : 0) / labels.length - 1,
-        backgroundColor: (ctx: { raw: { v: number } }) => {
-          const value = ctx.raw.v;
+        width: (ctx: ScriptableContext<'matrix'>) =>
+          ((ctx.chart.chartArea?.width ?? 0) / labels.length) - 1,
+        height: (ctx: ScriptableContext<'matrix'>) =>
+          ((ctx.chart.chartArea?.height ?? 0) / labels.length) - 1,
+        backgroundColor: (ctx: ScriptableContext<'matrix'>) => {
+          const value = (ctx.raw as { v: number }).v;
           const alpha = Math.abs(value);
           return value >= 0
             ? `rgba(75, 192, 192, ${alpha})`
