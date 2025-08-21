@@ -1,7 +1,10 @@
-/* Bloomberg-style dark theme */
+/* Autumn/Summer light theme */
 :root {
-  --background: #000000;
-  --foreground: #00ff00;
+  --background: #FFF5E1;
+  --foreground: #333333;
+  --primary: #FF7F50;
+  --secondary: #FFD700;
+  --accent: #2E8B57;
 }
 
 html,
@@ -13,7 +16,7 @@ body {
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: 'Courier New', Courier, monospace;
+  font-family: Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -25,10 +28,10 @@ body {
 }
 
 a {
-  color: inherit;
+  color: var(--accent);
   text-decoration: none;
 }
 
 html {
-  color-scheme: dark;
+  color-scheme: light;
 }
