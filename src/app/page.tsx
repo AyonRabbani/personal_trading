@@ -5,6 +5,7 @@ import CashFlowTrendChart from '@/components/CashFlowTrendChart';
 import CorrelationChart from '@/components/CorrelationChart';
 import MomentumChart from '@/components/MomentumChart';
 import CorrelationTrendChart from '@/components/CorrelationTrendChart';
+import CorrelationTable from '@/components/CorrelationTable';
 
 export const revalidate = 0;
 
@@ -124,8 +125,10 @@ export default async function Home() {
         </code>
         ; the matrix shows the Pearson correlation between each pair of ETFs.
       </p>
-      <CorrelationChart labels={labels} matrix={corrMatrix} />
-      <h2>30-Day Cash Flow Trend</h2>
+        <CorrelationChart labels={labels} matrix={corrMatrix} />
+        <h2>Correlation Table</h2>
+        <CorrelationTable labels={labels} matrix={corrMatrix} />
+        <h2>30-Day Cash Flow Trend</h2>
       <p>
         Each line depicts <code>P_t × V_t</code> for the past 30 trading days,
         illustrating how cash flow evolves through time.

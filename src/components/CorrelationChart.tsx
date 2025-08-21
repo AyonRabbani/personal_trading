@@ -21,6 +21,10 @@ ChartJS.register(
   Legend
 );
 
+ChartJS.defaults.color = '#333333';
+ChartJS.defaults.borderColor = '#FF7F50';
+ChartJS.defaults.font.family = 'Helvetica';
+
 interface Props {
   labels: string[];
   matrix: number[][]; // matrix[i][j]
@@ -59,20 +63,20 @@ export default function CorrelationChart({ labels, matrix }: Props) {
         labels,
         offset: true,
         ticks: {
-          color: '#FFA500',
+          color: '#333333',
           font: { family: 'Helvetica' },
         },
-        grid: { color: '#333' },
+        grid: { color: '#FFE4B5' },
       },
       y: {
         type: 'category',
         labels: [...labels],
         offset: true,
         ticks: {
-          color: '#FFA500',
+          color: '#333333',
           font: { family: 'Helvetica' },
         },
-        grid: { color: '#333' },
+        grid: { color: '#FFE4B5' },
       },
     },
     plugins: {
@@ -92,12 +96,12 @@ export default function CorrelationChart({ labels, matrix }: Props) {
   };
 
   return (
-    <Chart
-      type="matrix"
-      data={data}
-      options={options}
-      style={{ backgroundColor: '#000', fontFamily: 'Helvetica' }}
-    />
+      <Chart
+        type="matrix"
+        data={data}
+        options={options}
+        style={{ backgroundColor: '#FFF5E1', fontFamily: 'Helvetica' }}
+      />
   );
 }
 

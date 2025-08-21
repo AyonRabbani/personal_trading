@@ -22,9 +22,9 @@ ChartJS.register(
   Legend
 );
 
-ChartJS.defaults.color = '#00FF00';
-ChartJS.defaults.borderColor = '#333';
-ChartJS.defaults.font.family = 'monospace';
+ChartJS.defaults.color = '#333333';
+ChartJS.defaults.borderColor = '#FF7F50';
+ChartJS.defaults.font.family = 'Helvetica';
 
 interface Dataset {
   label: string;
@@ -38,12 +38,16 @@ interface Props {
 
 export default function CashFlowTrendChart({ labels, datasets }: Props) {
   const colors = [
-    '#00ff00',
-    '#ffab00',
-    '#00bfff',
-    '#ff00ff',
-    '#ff3333',
-    '#ffff00',
+    '#FF7F50',
+    '#FFD700',
+    '#FFA500',
+    '#F08080',
+    '#CD5C5C',
+    '#98FB98',
+    '#20B2AA',
+    '#DB7093',
+    '#BDB76B',
+    '#FF69B4',
   ];
 
   const data = {
@@ -59,10 +63,10 @@ export default function CashFlowTrendChart({ labels, datasets }: Props) {
   const options: ChartOptions<'line'> = {
     responsive: true,
     plugins: {
-      legend: {
-        position: 'top',
-        labels: { color: '#00FF00' },
-      },
+        legend: {
+          position: 'top',
+          labels: { color: '#333333' },
+        },
       tooltip: {
         callbacks: {
           label: (ctx: TooltipItem<'line'>) =>
@@ -71,16 +75,22 @@ export default function CashFlowTrendChart({ labels, datasets }: Props) {
       },
     },
     scales: {
-      x: { ticks: { color: '#00FF00' }, grid: { color: '#333' } },
+        x: { ticks: { color: '#333333' }, grid: { color: '#FFE4B5' } },
       y: {
-        ticks: {
-          color: '#00FF00',
-          callback: (value) => `$${Number(value) / 1e9}B`,
-        },
-        grid: { color: '#333' },
+          ticks: {
+            color: '#333333',
+            callback: (value) => `$${Number(value) / 1e9}B`,
+          },
+          grid: { color: '#FFE4B5' },
       },
     },
   };
 
-  return <Line data={data} options={options} style={{ backgroundColor: '#000' }} />;
-}
+    return (
+      <Line
+        data={data}
+        options={options}
+        style={{ backgroundColor: '#FFF5E1', fontFamily: 'Helvetica' }}
+      />
+    );
+  }
