@@ -9,7 +9,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "No tickers provided" }, { status: 400 });
   }
 
-  const chart = await fetchChart(tickers);
+  const range: "6mo" | "1y" | "2y" = body.range ?? "1y";
+  const chart = await fetchChart(tickers, range);
   const unlevered = runUnlevered(chart.prices);
   const levered = runLevered(chart.prices, body.leverage ?? 2);
 
