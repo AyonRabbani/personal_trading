@@ -1,6 +1,6 @@
 "use client";
 import { useBacktestStore } from "@/lib/store";
-import EquityChart from "./EquityChart";
+import EquityNmvLoanChart from "./EquityNmvLoanChart";
 import MarginChart from "./MarginChart";
 import DividendsChart from "./DividendsChart";
 import BucketChart from "./BucketChart";
@@ -22,8 +22,12 @@ export default function ResultsTabs() {
 
   return (
     <div className="space-y-4">
-      <EquityChart data={data.unlevered.equity} />
-      <EquityChart data={data.levered.equity} />
+      <EquityNmvLoanChart
+        levered={data.levered.equity}
+        nmv={data.levered.nmv}
+        loan={data.levered.loan}
+        unlevered={data.unlevered.equity}
+      />
       <MarginChart data={data.levered.marginRatio} />
       <DividendsChart data={weeklyDiv} />
       <BucketChart data={bucketData} />

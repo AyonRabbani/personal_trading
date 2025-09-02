@@ -6,6 +6,12 @@ interface RunResult {
   metrics: Metrics;
 }
 
+interface LeveredResult extends RunResult {
+  nmv: TimePoint[];
+  loan: TimePoint[];
+  marginRatio: TimePoint[];
+}
+
 function calcPortfolioReturns(prices: SeriesMap): { dates: string[]; returns: number[] } {
   const tickers = Object.keys(prices);
   if (tickers.length === 0) return { dates: [], returns: [] };
@@ -26,32 +32,70 @@ function calcPortfolioReturns(prices: SeriesMap): { dates: string[]; returns: nu
 }
 
 // core engine (levered and unlevered runs)
-export function runUnlevered(prices: SeriesMap): RunResult {
+export function runUnlevered(
+  prices: SeriesMap,
+  initialCapital = 6000,
+  monthlyDeposit = 0
+): RunResult {
   const { dates, returns } = calcPortfolioReturns(prices);
-  let equity = 1;
+  let equity = initialCapital;
   const equityCurve: TimePoint[] = [];
+  let lastMonth = dates[0] ? new Date(dates[0]).getMonth() : -1;
   for (let i = 0; i < returns.length; i++) {
+    const date = dates[i];
+    const month = new Date(date).getMonth();
+    if (month !== lastMonth) {
+      equity += monthlyDeposit;
+      lastMonth = month;
+    }
     equity *= 1 + returns[i];
-    equityCurve.push({ date: dates[i], value: equity });
+    equityCurve.push({ date, value: equity });
   }
   return { equity: equityCurve, metrics: computeMetrics(returns) };
 }
 
-export function runLevered(prices: SeriesMap, leverage = 2) {
+export function runLevered(
+  prices: SeriesMap,
+  initialCapital = 6000,
+  monthlyDeposit = 0,
+  bufferPts = 0.05
+): LeveredResult {
   const { dates, returns } = calcPortfolioReturns(prices);
-  let equity = 1;
+  const target = 0.25 + bufferPts; // equity / nmv target
+  const leverage = 1 / target;
+  let equity = initialCapital;
+  let nmv = equity / target;
+  let loan = nmv - equity;
+  let lastMonth = dates[0] ? new Date(dates[0]).getMonth() : -1;
+
   const equityCurve: TimePoint[] = [];
+  const nmvCurve: TimePoint[] = [];
+  const loanCurve: TimePoint[] = [];
+  const marginCurve: TimePoint[] = [];
+
   for (let i = 0; i < returns.length; i++) {
+    const date = dates[i];
+    const month = new Date(date).getMonth();
+    if (month !== lastMonth) {
+      equity += monthlyDeposit;
+      nmv = equity / target;
+      loan = nmv - equity;
+      lastMonth = month;
+    }
     equity *= 1 + returns[i] * leverage;
-    equityCurve.push({ date: dates[i], value: equity });
+    nmv = equity / target;
+    loan = nmv - equity;
+    equityCurve.push({ date, value: equity });
+    nmvCurve.push({ date, value: nmv });
+    loanCurve.push({ date, value: loan });
+    marginCurve.push({ date, value: equity / nmv });
   }
-  const marginRatio: TimePoint[] = equityCurve.map((p) => ({
-    date: p.date,
-    value: 1 / leverage,
-  }));
+
   return {
     equity: equityCurve,
-    marginRatio,
+    nmv: nmvCurve,
+    loan: loanCurve,
+    marginRatio: marginCurve,
     metrics: computeMetrics(returns.map((r) => r * leverage)),
   };
 }
