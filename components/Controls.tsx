@@ -16,8 +16,9 @@ export default function Controls() {
   const setData = useBacktestStore((s) => s.setData);
 
   async function runBacktest(selectedRange: "6mo" | "1y" | "2y") {
+    // allow users to separate tickers by commas, spaces or newlines
     const symbols = tickers
-      .split(",")
+      .split(/[\s,]+/)
       .map((t) => t.trim().toUpperCase())
       .filter(Boolean);
     if (symbols.length === 0) return;
@@ -33,6 +34,12 @@ export default function Controls() {
         bufferPts: buffer / 100,
       }),
     });
+    if (!res.ok) {
+      // surface network or validation errors to the console but avoid
+      // clobbering existing results
+      console.error("Backtest request failed", await res.text());
+      return;
+    }
     const json = await res.json();
     setData(json);
   }
