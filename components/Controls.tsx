@@ -3,7 +3,9 @@ import { useState, useEffect } from "react";
 import { useBacktestStore } from "@/lib/store";
 
 const RANGES: ("6mo" | "1y" | "2y")[] = ["6mo", "1y", "2y"];
-const DEFAULT_TICKERS = "YBTC,BTCI,QDTE,ULTY,XDTE";
+// Use widely traded tickers by default so the initial dashboard load
+// retrieves real market data instead of failing with "No results".
+const DEFAULT_TICKERS = "AAPL,MSFT,GOOGL,AMZN,META";
 
 export default function Controls() {
   const [tickers, setTickers] = useState(DEFAULT_TICKERS);
