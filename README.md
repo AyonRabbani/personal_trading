@@ -1,20 +1,19 @@
-# Sector Index Tracker
+# Personal Trading Dashboard
 
-A personal Next.js app that displays daily performance of major sector ETFs using the Polygon.io API.
+This project is a Next.js 14 (App Router) scaffold for a margin backtesting dashboard. It includes placeholder components, API routes, and library stubs for future development.
 
-## Setup
+## Getting Started
 
-1. Copy `env.example` to `.env.local` and set `POLYGON_API_KEY`.
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Run the development server:
-   ```bash
-   npm run dev
-   ```
+Install dependencies:
 
-## Scripts
+```bash
+npm install
+```
 
-- `npm run lint` - run ESLint.
-- `npm run build` - build the app for production.
+Run the development server:
+
+```bash
+npm run dev
+```
+
+The app exposes pages for the main dashboard (`/`) and a simple screener (`/screener`).
