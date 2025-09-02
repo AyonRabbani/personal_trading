@@ -15,16 +15,19 @@ export async function fetchChart(
   const dividends: DividendMap = {};
 
   for (const t of tickers) {
-    const res = await yahooFinance.chart(t, { range, interval });
+    // yahoo-finance2 types don't expose the `range` option yet, so cast to `any`.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const res = await (yahooFinance as any).chart(t, { range, interval });
 
     // map price quotes
-    prices[t] = res.quotes.map((q) => ({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    prices[t] = (res.quotes as any[]).map((q: any) => ({
       date: q.date.toISOString().slice(0, 10),
       close: q.close ?? 0,
     }));
 
     // map dividend events if any
-    const divs = res.events?.dividends || {};
+    const divs = (res.events?.dividends || {}) as Record<string, { date: number; amount: number }>;
     dividends[t] = Object.values(divs).map((d) => ({
       date: new Date(d.date).toISOString().slice(0, 10),
       amount: d.amount,
