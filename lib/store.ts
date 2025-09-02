@@ -5,6 +5,8 @@ export interface BacktestResult {
   unlevered: { equity: TimePoint[]; metrics: Metrics };
   levered: {
     equity: TimePoint[];
+    nmv: TimePoint[];
+    loan: TimePoint[];
     marginRatio: TimePoint[];
     metrics: Metrics;
   };

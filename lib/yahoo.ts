@@ -8,16 +8,23 @@ import { ChartResponse, SeriesMap, DividendMap, Ticker } from "./types";
 // simple to avoid over‑engineering for this demo.
 export async function fetchChart(
   tickers: Ticker[],
-  range: "6mo" | "1y" | "2y" | "5y" = "1y",
+  range: "6mo" | "1y" | "2y" = "1y",
   interval: "1d" | "1wk" = "1d"
 ): Promise<ChartResponse> {
   const prices: SeriesMap = {};
   const dividends: DividendMap = {};
+  const now = new Date();
+  const period1 = new Date(now);
+  if (range === "6mo") period1.setMonth(now.getMonth() - 6);
+  else if (range === "1y") period1.setFullYear(now.getFullYear() - 1);
+  else if (range === "2y") period1.setFullYear(now.getFullYear() - 2);
 
   for (const t of tickers) {
-    // yahoo-finance2 types don't expose the `range` option yet, so cast to `any`.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const res = await (yahooFinance as any).chart(t, { range, interval });
+    const res = await yahooFinance.chart(t, {
+      period1,
+      period2: now,
+      interval,
+    });
 
     // map price quotes
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
