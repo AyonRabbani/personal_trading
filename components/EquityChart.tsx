@@ -19,6 +19,9 @@ export default function EquityChart({ data }: { data: TimePoint[] }) {
           Equity represents net market value minus any outstanding loan on each
           date.
         </p>
+        <p className="text-xs text-gray-500">
+          Formula: <code>E_t = NMV_t - Loan_t</code>
+        </p>
       </figcaption>
       <div className="h-64 w-full">
         <ResponsiveContainer width="100%" height="100%">

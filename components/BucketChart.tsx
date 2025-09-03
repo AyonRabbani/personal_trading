@@ -23,6 +23,9 @@ export default function BucketChart({ data }: { data: BucketDatum[] }) {
           Each slice shows the final equity for the unlevered and levered
           strategies at the end of the backtest.
         </p>
+        <p className="text-xs text-gray-500">
+          Formula: <code>End\ Equity = E_T</code>
+        </p>
       </figcaption>
       <div className="h-64 w-full">
         <ResponsiveContainer width="100%" height="100%">
