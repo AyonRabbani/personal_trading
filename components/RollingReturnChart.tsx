@@ -31,7 +31,7 @@ export default function RollingReturnChart({ levered, unlevered }: Props) {
           unlevered portfolios.
         </p>
         <p className="text-xs text-gray-500">
-          Formula: <code>R_t = E_t / E_{t-30} - 1</code>
+          Formula: <code>{"R_t = E_t / E_{t-30} - 1"}</code>
         </p>
       </figcaption>
       <div className="h-64 w-full">

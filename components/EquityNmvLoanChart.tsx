@@ -46,7 +46,7 @@ export default function EquityNmvLoanChart({
         </p>
         <p className="text-xs text-gray-500">
           Formula: <code>E_t = NMV_t - Loan_t</code>,
-          <code>E_after_t = E_t - tau * sum_{i<=t} d_i</code>
+          <code>{"E_after_t = E_t - tau * sum_{i<=t} d_i"}</code>
         </p>
       </figcaption>
       <div className="h-64 w-full">

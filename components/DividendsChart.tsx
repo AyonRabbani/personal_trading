@@ -20,7 +20,7 @@ export default function DividendsChart({ data }: { data: TimePoint[] }) {
           treat as dividend income.
         </p>
         <p className="text-xs text-gray-500">
-          Formula: <code>d_t = max(0, E_t - E_{t-1})</code>
+          Formula: <code>{"d_t = max(0, E_t - E_{t-1})"}</code>
         </p>
       </figcaption>
       <div className="h-64 w-full">

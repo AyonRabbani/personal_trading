@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useBacktestStore } from "@/lib/store";
+import type { TimePoint } from "@/lib/types";
 import EquityNmvLoanChart from "./EquityNmvLoanChart";
 import MarginChart from "./MarginChart";
 import DividendsChart from "./DividendsChart";
@@ -36,7 +37,7 @@ export default function ResultsTabs() {
     value: Math.max(0, p.value - data.levered.equity[i].value),
   }));
 
-  function slice(arr: typeof data.levered.equity) {
+  function slice(arr: TimePoint[]) {
     return arr.slice(-days);
   }
   const levered = slice(data.levered.equity);
@@ -51,8 +52,8 @@ export default function ResultsTabs() {
   const weeklyDiv = weeklyDivAll.slice(-Math.max(days - 1, 0));
 
   // rolling 30-day returns
-  function rolling(series: typeof data.levered.equity, window = 30) {
-    const res: typeof data.levered.equity = [];
+  function rolling(series: TimePoint[], window = 30) {
+    const res: TimePoint[] = [];
     for (let i = window; i < series.length; i++) {
       res.push({
         date: series[i].date,
