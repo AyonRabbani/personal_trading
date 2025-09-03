@@ -2,6 +2,12 @@
 import { create } from "zustand";
 import { TimePoint, Metrics } from "./types";
 
+export interface TickerStat {
+  ticker: string;
+  totalDividend: number;
+  dailyReturn: number;
+}
+
 export interface BacktestResult {
   unlevered: { equity: TimePoint[]; metrics: Metrics };
   levered: {
@@ -9,8 +15,10 @@ export interface BacktestResult {
     nmv: TimePoint[];
     loan: TimePoint[];
     marginRatio: TimePoint[];
+    marginCalls: TimePoint[];
     metrics: Metrics;
   };
+  tickerStats: TickerStat[];
 }
 
 interface BacktestState {

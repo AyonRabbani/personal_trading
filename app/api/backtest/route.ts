@@ -39,5 +39,18 @@ export async function POST(req: Request) {
     bufferPts
   );
 
-  return NextResponse.json({ unlevered, levered });
+  const tickerStats = tickers.map((t) => {
+    const divTotal = (chart.dividends[t] || []).reduce(
+      (sum, d) => sum + d.amount,
+      0
+    );
+    const series = chart.prices[t] || [];
+    const dailyReturn =
+      series.length >= 2
+        ? series[series.length - 1].close / series[series.length - 2].close - 1
+        : 0;
+    return { ticker: t, totalDividend: divTotal, dailyReturn };
+  });
+
+  return NextResponse.json({ unlevered, levered, tickerStats });
 }

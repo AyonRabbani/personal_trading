@@ -10,6 +10,7 @@ interface LeveredResult extends RunResult {
   nmv: TimePoint[];
   loan: TimePoint[];
   marginRatio: TimePoint[];
+  marginCalls: TimePoint[];
 }
 
 function calcPortfolioReturns(prices: SeriesMap): { dates: string[]; returns: number[] } {
@@ -61,34 +62,46 @@ export function runLevered(
   bufferPts = 0.05
 ): LeveredResult {
   const { dates, returns } = calcPortfolioReturns(prices);
-  const target = 0.25 + bufferPts; // equity / nmv target
+  const maintReq = 0.25;
+  const target = maintReq + bufferPts; // desired equity / nmv target
   const leverage = 1 / target;
   let equity = initialCapital;
-  let nmv = equity / target;
-  let loan = nmv - equity;
+  let loan = equity * (leverage - 1);
+  let nmv = equity + loan;
   let lastMonth = dates[0] ? new Date(dates[0]).getMonth() : -1;
 
   const equityCurve: TimePoint[] = [];
   const nmvCurve: TimePoint[] = [];
   const loanCurve: TimePoint[] = [];
   const marginCurve: TimePoint[] = [];
+  const marginCalls: TimePoint[] = [];
 
   for (let i = 0; i < returns.length; i++) {
     const date = dates[i];
     const month = new Date(date).getMonth();
     if (month !== lastMonth) {
       equity += monthlyDeposit;
-      nmv = equity / target;
-      loan = nmv - equity;
+      loan = equity * (leverage - 1); // scale loan with portfolio
+      nmv = equity + loan;
       lastMonth = month;
     }
-    equity *= 1 + returns[i] * leverage;
-    nmv = equity / target;
-    loan = nmv - equity;
+
+    equity += returns[i] * nmv; // portfolio return applied to assets
+    nmv = equity + loan;
+    const ratio = equity / nmv;
+
     equityCurve.push({ date, value: equity });
     nmvCurve.push({ date, value: nmv });
     loanCurve.push({ date, value: loan });
-    marginCurve.push({ date, value: equity / nmv });
+    marginCurve.push({ date, value: ratio });
+
+    if (ratio <= maintReq) {
+      marginCalls.push({ date, value: ratio });
+    } else {
+      // rebalance to target leverage after market move
+      loan = equity * (leverage - 1);
+      nmv = equity + loan;
+    }
   }
 
   return {
@@ -96,6 +109,7 @@ export function runLevered(
     nmv: nmvCurve,
     loan: loanCurve,
     marginRatio: marginCurve,
+    marginCalls,
     metrics: computeMetrics(returns.map((r) => r * leverage)),
   };
 }
