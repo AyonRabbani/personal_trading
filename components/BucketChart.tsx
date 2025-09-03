@@ -18,22 +18,23 @@ export default function BucketChart({ data }: { data: BucketDatum[] }) {
   return (
     <figure className="w-full">
       <figcaption className="mb-2">
-        <h3 className="text-lg font-semibold">Ending Equity Buckets</h3>
+        <h3 className="text-lg font-semibold">Ending Equity and Tax Liability</h3>
         <p className="text-sm text-gray-600">
           Each slice shows the final equity for the unlevered and levered
-          strategies at the end of the backtest.
+          strategies along with the accrued tax liability from reinvested
+          dividends.
         </p>
         <p className="text-xs text-gray-500">
-          Formula: <code>End\ Equity = E_T</code>
+          Formula: <code>End\ Equity = E_T</code>; <code>Tax = \tau \sum d_i</code>
         </p>
       </figcaption>
       <div className="h-64 w-full">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
-            <title>Ending Equity Buckets</title>
+            <title>Ending Equity and Tax Liability</title>
             <desc>
-              Values represent ending equity for each strategy; larger slices
-              indicate greater terminal equity.
+              Values represent ending equity for each strategy and the accrued tax
+              owed; larger slices indicate greater amounts.
             </desc>
             <Pie data={data} dataKey="value" nameKey="name" label>
               {data.map((entry, index) => (

@@ -8,6 +8,7 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
+  Legend,
 } from "recharts";
 
 interface Props {
@@ -46,8 +47,21 @@ export default function RollingReturnChart({ levered, unlevered }: Props) {
             <XAxis dataKey="date" hide />
             <YAxis />
             <Tooltip />
-            <Line type="monotone" dataKey="levered" stroke="#8884d8" dot={false} />
-            <Line type="monotone" dataKey="unlevered" stroke="#000000" dot={false} />
+            <Legend />
+            <Line
+              type="monotone"
+              dataKey="levered"
+              stroke="#8884d8"
+              dot={false}
+              name="Levered"
+            />
+            <Line
+              type="monotone"
+              dataKey="unlevered"
+              stroke="#000000"
+              dot={false}
+              name="Unlevered"
+            />
           </LineChart>
         </ResponsiveContainer>
       </div>

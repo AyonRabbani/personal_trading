@@ -115,19 +115,25 @@ export default function Controls() {
           />
         </label>
       </div>
-      <div className="flex items-center gap-2">
-        <input
-          type="range"
-          min={0}
-          max={RANGES.length - 1}
-          step={1}
-          value={rangeIdx}
-          onChange={handleRangeChange}
-          className="flex-1"
-        />
-        <span className="w-16 text-sm text-gray-600 text-right">
-          {RANGES[rangeIdx]}
-        </span>
+      <div className="flex flex-col">
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-600">Investment timeframe</span>
+          <input
+            type="range"
+            min={0}
+            max={RANGES.length - 1}
+            step={1}
+            value={rangeIdx}
+            onChange={handleRangeChange}
+            className="flex-1"
+          />
+          <span className="w-16 text-sm text-gray-600 text-right">
+            {RANGES[rangeIdx]}
+          </span>
+        </div>
+        <p className="text-xs text-gray-500">
+          Determines the starting point of the investment.
+        </p>
       </div>
       <div className="flex items-center gap-2">
         <input

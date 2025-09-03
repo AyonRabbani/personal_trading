@@ -9,6 +9,7 @@ import BucketChart from "./BucketChart";
 import MetricsCards from "./MetricsCards";
 import TickerStatsTable from "./TickerStatsTable";
 import RollingReturnChart from "./RollingReturnChart";
+import DividendTaxChart from "./DividendTaxChart";
 
 const TAX_RATE = 0.15; // 15% dividend tax assumption
 
@@ -22,15 +23,22 @@ export default function ResultsTabs() {
 
   const maxDays = data.levered.equity.length;
 
-  // compute after-tax equity based on positive changes (dividends)
+  // accumulate reinvested dividends and tax liability
   let taxAcc = 0;
-  const afterTaxAll = data.levered.equity.map((p, i) => {
+  let divAcc = 0;
+  const divTaxAll = data.levered.equity.map((p, i) => {
     if (i > 0) {
       const diff = p.value - data.levered.equity[i - 1].value;
-      if (diff > 0) taxAcc += diff * TAX_RATE;
+      if (diff > 0) {
+        divAcc += diff;
+        taxAcc += diff * TAX_RATE;
+      }
     }
-    return { date: p.date, value: p.value - taxAcc };
+    return { date: p.date, dividends: divAcc, taxes: taxAcc };
   });
+
+  const dividendsTotal = divAcc;
+  const taxesTotal = taxAcc;
 
   const weeklyDivAll = data.levered.equity.slice(1).map((p, i) => ({
     date: p.date,
@@ -44,7 +52,7 @@ export default function ResultsTabs() {
   const nmv = slice(data.levered.nmv);
   const loan = slice(data.levered.loan);
   const unlevered = slice(data.unlevered.equity);
-  const afterTax = slice(afterTaxAll);
+  const divTax = divTaxAll.slice(-days);
   const marginRatio = slice(data.levered.marginRatio);
   const marginCalls = data.levered.marginCalls.filter(
     (c) => new Date(c.date) >= new Date(levered[0].date)
@@ -72,7 +80,7 @@ export default function ResultsTabs() {
   const bucketData = [
     { name: "Unlevered", value: unlevered.at(-1)?.value ?? 0 },
     { name: "Levered", value: levered.at(-1)?.value ?? 0 },
-    { name: "After Tax", value: afterTax.at(-1)?.value ?? 0 },
+    { name: "Tax Liability", value: taxesTotal },
   ];
 
   return (
@@ -93,12 +101,16 @@ export default function ResultsTabs() {
         nmv={nmv}
         loan={loan}
         unlevered={unlevered}
-        afterTax={afterTax}
       />
       <MarginChart data={marginRatio} calls={marginCalls} />
       <RollingReturnChart levered={rollLevered} unlevered={rollUnlevered} />
       <TickerStatsTable stats={data.tickerStats} />
       <DividendsChart data={weeklyDiv} />
+      <DividendTaxChart
+        data={divTax}
+        dividendsTotal={dividendsTotal}
+        taxTotal={taxesTotal}
+      />
       <BucketChart data={bucketData} />
       <MetricsCards metrics={data.levered.metrics} />
     </div>
