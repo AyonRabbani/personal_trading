@@ -8,6 +8,7 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
+  Legend,
 } from "recharts";
 
 interface Props {
@@ -15,7 +16,6 @@ interface Props {
   nmv: TimePoint[];
   loan: TimePoint[];
   unlevered: TimePoint[];
-  afterTax: TimePoint[];
 }
 
 export default function EquityNmvLoanChart({
@@ -23,7 +23,6 @@ export default function EquityNmvLoanChart({
   nmv,
   loan,
   unlevered,
-  afterTax,
 }: Props) {
   const data = levered.map((p, i) => ({
     date: p.date,
@@ -31,7 +30,6 @@ export default function EquityNmvLoanChart({
     nmv: nmv[i]?.value,
     loan: loan[i]?.value,
     unlevered: unlevered[i]?.value,
-    afterTax: afterTax[i]?.value,
   }));
 
   return (
@@ -41,12 +39,11 @@ export default function EquityNmvLoanChart({
         <p className="text-sm text-gray-600">
           Levered equity equals net market value minus the margin loan. The lines
           compare levered and unlevered equity alongside net market value and
-          loan balances over time. An after-tax line assumes a 15% tax on
-          dividend-like gains.
+          loan balances over time. Dividends are reinvested and any tax liability
+          is tracked separately.
         </p>
         <p className="text-xs text-gray-500">
-          Formula: <code>E_t = NMV_t - Loan_t</code>,
-          <code>{"E_after_t = E_t - tau * sum_{i<=t} d_i"}</code>
+          Formula: <code>E_t = NMV_t - Loan_t</code>
         </p>
       </figcaption>
       <div className="h-64 w-full">
@@ -61,14 +58,38 @@ export default function EquityNmvLoanChart({
             <XAxis dataKey="date" hide />
             <YAxis />
             <Tooltip />
-            <Line type="monotone" dataKey="levered" stroke="#8884d8" dot={false} />
-            <Line type="monotone" dataKey="nmv" stroke="#82ca9d" dot={false} />
-            <Line type="monotone" dataKey="loan" stroke="#ffc658" dot={false} />
-            <Line type="monotone" dataKey="unlevered" stroke="#000000" dot={false} />
-            <Line type="monotone" dataKey="afterTax" stroke="#ff0000" dot={false} />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
-    </figure>
-  );
+            <Legend />
+            <Line
+              type="monotone"
+              dataKey="levered"
+              stroke="#8884d8"
+              dot={false}
+              name="Levered Equity"
+            />
+            <Line
+              type="monotone"
+              dataKey="nmv"
+              stroke="#82ca9d"
+              dot={false}
+              name="Net Market Value"
+            />
+            <Line
+              type="monotone"
+              dataKey="loan"
+              stroke="#ffc658"
+              dot={false}
+              name="Loan"
+            />
+            <Line
+              type="monotone"
+              dataKey="unlevered"
+              stroke="#000000"
+              dot={false}
+              name="Unlevered Equity"
+            />
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+  </figure>
+);
 }
