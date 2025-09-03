@@ -5,6 +5,7 @@ import MarginChart from "./MarginChart";
 import DividendsChart from "./DividendsChart";
 import BucketChart from "./BucketChart";
 import MetricsCards from "./MetricsCards";
+import TickerStatsTable from "./TickerStatsTable";
 
 export default function ResultsTabs() {
   const data = useBacktestStore((s) => s.data);
@@ -28,7 +29,8 @@ export default function ResultsTabs() {
         loan={data.levered.loan}
         unlevered={data.unlevered.equity}
       />
-      <MarginChart data={data.levered.marginRatio} />
+      <MarginChart data={data.levered.marginRatio} calls={data.levered.marginCalls} />
+      <TickerStatsTable stats={data.tickerStats} />
       <DividendsChart data={weeklyDiv} />
       <BucketChart data={bucketData} />
       <MetricsCards metrics={data.levered.metrics} />
