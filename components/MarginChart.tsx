@@ -8,9 +8,16 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
+  ReferenceDot,
 } from "recharts";
 
-export default function MarginChart({ data }: { data: TimePoint[] }) {
+export default function MarginChart({
+  data,
+  calls = [],
+}: {
+  data: TimePoint[];
+  calls?: TimePoint[];
+}) {
   return (
     <figure className="w-full">
       <figcaption className="mb-2">
@@ -33,6 +40,9 @@ export default function MarginChart({ data }: { data: TimePoint[] }) {
             <YAxis domain={[0, 1]} />
             <Tooltip />
             <Line type="monotone" dataKey="value" stroke="#82ca9d" dot={false} />
+            {calls.map((c) => (
+              <ReferenceDot key={c.date} x={c.date} y={c.value} r={4} fill="red" />
+            ))}
           </LineChart>
         </ResponsiveContainer>
       </div>
