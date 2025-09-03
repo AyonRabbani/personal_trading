@@ -26,6 +26,9 @@ export default function MarginChart({
           Margin ratio is calculated daily as equity divided by net market value
           for the levered portfolio.
         </p>
+        <p className="text-xs text-gray-500">
+          Formula: <code>MR_t = E_t / NMV_t</code>
+        </p>
       </figcaption>
       <div className="h-64 w-full">
         <ResponsiveContainer width="100%" height="100%">
