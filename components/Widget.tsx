@@ -35,7 +35,7 @@ export default function Widget({
   const [module, setModule] = useState<ModuleKey>(defaultModule);
   const data = useBacktestStore((s) => s.data);
   const divTaxData = (() => {
-    if (!data) return { div: [], tax: [], divTotal: 0, taxTotal: 0 };
+    if (!data) return { div: [], taxPairs: [], divTotal: 0, taxTotal: 0 };
     const TAX_RATE = 0.15;
     let taxAcc = 0;
     let divAcc = 0;
