@@ -12,8 +12,7 @@ export default function Controls() {
   const [rangeIdx, setRangeIdx] = useState(1); // default to 1y
   const [initialCapital, setInitialCapital] = useState(6000);
   const [monthlyDeposit, setMonthlyDeposit] = useState(2000);
-  const [lookbackDays, setLookbackDays] = useState(30);
-  const [buffer, setBuffer] = useState(5); // percent
+  const [leverage, setLeverage] = useState(2);
   const data = useBacktestStore((s) => s.data);
   const setData = useBacktestStore((s) => s.setData);
 
@@ -24,6 +23,8 @@ export default function Controls() {
       .map((t) => t.trim().toUpperCase())
       .filter(Boolean);
     if (symbols.length === 0) return;
+    const maintReq = 0.25;
+    const bufferPts = Math.max(0, 1 / leverage - maintReq);
     const res = await fetch("/api/backtest", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -32,13 +33,10 @@ export default function Controls() {
         range: selectedRange,
         initialCapital,
         monthlyDeposit,
-        lookbackDays,
-        bufferPts: buffer / 100,
+        bufferPts,
       }),
     });
     if (!res.ok) {
-      // surface network or validation errors to the console but avoid
-      // clobbering existing results
       console.error("Backtest request failed", await res.text());
       return;
     }
@@ -57,7 +55,6 @@ export default function Controls() {
     await runBacktest(RANGES[idx]);
   }
 
-  // run once on mount using the defaults so the dashboard populates immediately
   useEffect(() => {
     runBacktest(RANGES[rangeIdx]).catch(() => {
       /* ignore errors on initial load */
@@ -82,16 +79,16 @@ export default function Controls() {
   return (
     <form onSubmit={handleSubmit} className="mb-4 flex flex-col gap-2">
       <textarea
-        className="border p-2 h-24"
+        className="border p-2 h-24 bg-black text-green-400"
         value={tickers}
         onChange={(e) => setTickers(e.target.value)}
       />
       <div className="flex gap-2">
         <label className="flex flex-col text-sm">
-          Initial
+          Capital
           <input
             type="number"
-            className="border p-1"
+            className="border p-1 bg-black text-green-400"
             value={initialCapital}
             onChange={(e) => setInitialCapital(Number(e.target.value))}
           />
@@ -100,24 +97,25 @@ export default function Controls() {
           Monthly
           <input
             type="number"
-            className="border p-1"
+            className="border p-1 bg-black text-green-400"
             value={monthlyDeposit}
             onChange={(e) => setMonthlyDeposit(Number(e.target.value))}
           />
         </label>
         <label className="flex flex-col text-sm">
-          Lookback
+          Leverage
           <input
             type="number"
-            className="border p-1"
-            value={lookbackDays}
-            onChange={(e) => setLookbackDays(Number(e.target.value))}
+            step={0.1}
+            className="border p-1 bg-black text-green-400"
+            value={leverage}
+            onChange={(e) => setLeverage(Number(e.target.value))}
           />
         </label>
       </div>
       <div className="flex flex-col">
         <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-600">Investment timeframe</span>
+          <span className="text-sm text-gray-400">Start date</span>
           <input
             type="range"
             min={0}
@@ -127,36 +125,22 @@ export default function Controls() {
             onChange={handleRangeChange}
             className="flex-1"
           />
-          <span className="w-16 text-sm text-gray-600 text-right">
+          <span className="w-16 text-sm text-gray-400 text-right">
             {RANGES[rangeIdx]}
           </span>
         </div>
         <p className="text-xs text-gray-500">
-          Determines the starting point of the investment.
+          Determines how far back to fetch history.
         </p>
       </div>
-      <div className="flex items-center gap-2">
-        <input
-          type="range"
-          min={0}
-          max={15}
-          step={0.5}
-          value={buffer}
-          onChange={(e) => setBuffer(Number(e.target.value))}
-          className="flex-1"
-        />
-        <span className="w-24 text-sm text-gray-600 text-right">
-          Buffer {buffer}% (Maint 25%)
-        </span>
-      </div>
       <div className="flex gap-2">
-        <button type="submit" className="bg-blue-500 text-white px-4 py-2">
+        <button type="submit" className="bg-green-700 text-black px-4 py-2">
           Run
         </button>
         <button
           type="button"
           onClick={exportCsv}
-          className="bg-gray-200 px-4 py-2"
+          className="bg-gray-700 text-green-400 px-4 py-2"
         >
           Export CSV
         </button>
