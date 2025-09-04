@@ -34,27 +34,6 @@ export default function Widget({
 }) {
   const [module, setModule] = useState<ModuleKey>(defaultModule);
   const data = useBacktestStore((s) => s.data);
-  const divTaxData = (() => {
-    if (!data) return { div: [], taxPairs: [], divTotal: 0, taxTotal: 0 };
-    const TAX_RATE = 0.15;
-    let taxAcc = 0;
-    let divAcc = 0;
-    const pairs = data.levered.equity.map((p, i) => {
-      if (i > 0) {
-        const diff = p.value - data.levered.equity[i - 1].value;
-        if (diff > 0) {
-          divAcc += diff;
-          taxAcc += diff * TAX_RATE;
-        }
-      }
-      return { date: p.date, dividends: divAcc, taxes: taxAcc };
-    });
-    const weeklyDiv = data.levered.equity.slice(1).map((p, i) => ({
-      date: p.date,
-      value: Math.max(0, p.value - data.levered.equity[i].value),
-    }));
-    return { div: weeklyDiv, taxPairs: pairs, divTotal: divAcc, taxTotal: taxAcc };
-  })();
 
   function render() {
     switch (module) {
@@ -67,13 +46,13 @@ export default function Widget({
       case "portfolio":
         return <PortfolioChart />;
       case "dividends":
-        return <DividendsChart data={divTaxData.div} />;
+        return <DividendsChart data={data?.dividends || []} />;
       case "tax":
         return (
           <DividendTaxChart
-            data={divTaxData.taxPairs}
-            dividendsTotal={divTaxData.divTotal}
-            taxTotal={divTaxData.taxTotal}
+            data={data?.dividendTax || []}
+            dividendsTotal={data?.divTotal || 0}
+            taxTotal={data?.taxTotal || 0}
           />
         );
       default:

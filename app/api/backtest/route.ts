@@ -51,6 +51,60 @@ export async function POST(req: Request) {
         : 0;
     return { ticker: t, totalDividend: divTotal, dailyReturn };
   });
+  // aggregate dividend cashflows and tax liability
+  const TAX_RATE = 0.15;
+  const prices = chart.prices;
+  const dividendsMap = chart.dividends;
+  const shares: Record<string, number> = {};
+  const divIdx: Record<string, number> = {};
+  const capitalPerTicker = initialCapital / tickers.length;
+  for (const t of tickers) {
+    const firstPrice = prices[t][0]?.close || 0;
+    shares[t] = firstPrice ? capitalPerTicker / firstPrice : 0;
+    divIdx[t] = 0;
+    dividendsMap[t] = (dividendsMap[t] || []).sort((a, b) =>
+      a.date.localeCompare(b.date)
+    );
+  }
+  const baseSeries = prices[tickers[0]] || [];
+  const dividends: { date: string; value: number }[] = [];
+  const dividendTax: { date: string; dividends: number; taxes: number }[] = [];
+  let cumDiv = 0;
+  let cumTax = 0;
+  for (let i = 0; i < baseSeries.length; i++) {
+    const date = baseSeries[i].date;
+    let dayDiv = 0;
+    for (const t of tickers) {
+      const divs = dividendsMap[t];
+      while (
+        divIdx[t] < divs.length &&
+        divs[divIdx[t]].date === date
+      ) {
+        const cash = shares[t] * divs[divIdx[t]].amount;
+        dayDiv += cash;
+        const price = prices[t][i]?.close || 0;
+        if (price > 0) {
+          shares[t] += cash / price;
+        }
+        divIdx[t]++;
+      }
+    }
+    if (dayDiv > 0) {
+      cumDiv += dayDiv;
+      cumTax += dayDiv * TAX_RATE;
+      dividends.push({ date, value: dayDiv });
+      dividendTax.push({ date, dividends: cumDiv, taxes: cumTax });
+    }
+  }
 
-  return NextResponse.json({ unlevered, levered, tickerStats });
+  return NextResponse.json({
+    unlevered,
+    levered,
+    tickerStats,
+    prices: chart.prices,
+    dividends,
+    dividendTax,
+    divTotal: cumDiv,
+    taxTotal: cumTax,
+  });
 }

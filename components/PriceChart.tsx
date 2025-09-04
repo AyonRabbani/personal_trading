@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 import { useBacktestStore } from "@/lib/store";
 import {
   LineChart,
@@ -9,77 +9,56 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
+  Legend,
 } from "recharts";
-
-interface PricePoint {
-  date: string;
-  close: number;
-}
 
 export default function PriceChart() {
   const data = useBacktestStore((s) => s.data);
-  const tickers = data?.tickerStats.map((t) => t.ticker) || [];
-  const [ticker, setTicker] = useState(tickers[0] || "AAPL");
-  const [newTicker, setNewTicker] = useState("");
-  const [prices, setPrices] = useState<PricePoint[]>([]);
+  const chartData = useMemo(() => {
+    const prices = data?.prices;
+    if (!prices) return [];
+    const tickers = Object.keys(prices);
+    if (tickers.length === 0) return [];
+    const length = prices[tickers[0]].length;
+    const arr: Record<string, number | string>[] = [];
+    for (let i = 0; i < length; i++) {
+      const date = prices[tickers[0]][i].date;
+      const point: Record<string, number | string> = { date };
+      for (const t of tickers) {
+        point[t] = prices[t][i]?.close ?? null;
+      }
+      arr.push(point);
+    }
+    return arr;
+  }, [data]);
 
-  async function fetchPrices(t: string) {
-    const res = await fetch(`/api/price?ticker=${t}`);
-    const json = await res.json();
-    setPrices(json.prices || []);
-  }
+  if (!data) return <div>No data</div>;
+  const prices = data.prices;
+  const tickers = Object.keys(prices);
 
-  useEffect(() => {
-    fetchPrices(ticker).catch(() => {
-      /* ignore */
-    });
-  }, [ticker]);
-
-  function handleAdd() {
-    if (!newTicker) return;
-    const t = newTicker.toUpperCase();
-    setTicker(t);
-    fetchPrices(t).catch(() => {
-      /* ignore */
-    });
-    setNewTicker("");
-  }
+  const colors = [
+    "#00ff00",
+    "#ff0000",
+    "#8884d8",
+    "#82ca9d",
+    "#ffc658",
+    "#ff00ff",
+  ];
 
   return (
-    <div>
-      <div className="flex gap-2 mb-2">
-        <select
-          value={ticker}
-          onChange={(e) => setTicker(e.target.value)}
-          className="bg-black text-green-400 border"
-        >
-          {tickers.map((t) => (
-            <option key={t} value={t}>
-              {t}
-            </option>
+    <div className="h-64 w-full">
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart data={chartData} margin={{ left: 20, right: 20, top: 20, bottom: 20 }}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="date" hide />
+          <YAxis />
+          <Tooltip />
+          <Legend />
+          {tickers.map((t, i) => (
+            <Line key={t} type="monotone" dataKey={t} stroke={colors[i % colors.length]} dot={false} />
           ))}
-        </select>
-        <input
-          value={newTicker}
-          onChange={(e) => setNewTicker(e.target.value)}
-          placeholder="Add"
-          className="border px-1 bg-black text-green-400"
-        />
-        <button onClick={handleAdd} className="border px-2">
-          Add
-        </button>
-      </div>
-      <div className="h-64 w-full">
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={prices} margin={{ left: 20, right: 20, top: 20, bottom: 20 }}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="date" hide />
-            <YAxis />
-            <Tooltip />
-            <Line type="monotone" dataKey="close" stroke="#00ff00" dot={false} />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
+        </LineChart>
+      </ResponsiveContainer>
     </div>
   );
 }

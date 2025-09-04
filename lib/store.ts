@@ -1,6 +1,6 @@
 "use client";
 import { create } from "zustand";
-import { TimePoint, Metrics } from "./types";
+import { TimePoint, Metrics, SeriesMap } from "./types";
 
 export interface TickerStat {
   ticker: string;
@@ -19,6 +19,11 @@ export interface BacktestResult {
     metrics: Metrics;
   };
   tickerStats: TickerStat[];
+  prices: SeriesMap;
+  dividends: TimePoint[];
+  dividendTax: { date: string; dividends: number; taxes: number }[];
+  divTotal: number;
+  taxTotal: number;
 }
 
 interface BacktestState {
