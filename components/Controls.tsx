@@ -23,7 +23,8 @@ export default function Controls() {
       .filter(Boolean);
     if (symbols.length === 0) return;
     const maintReq = 0.25;
-    const bufferPts = Math.max(0, 1 / leverage - maintReq);
+    // Ensure bufferPts never exceeds backend limit to avoid request errors
+    const bufferPts = Math.min(0.15, Math.max(0, 1 / leverage - maintReq));
     const res = await fetch("/api/backtest", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -53,12 +54,13 @@ export default function Controls() {
     setInputs({ rangeIdx: idx });
   }
 
+  // Run a single backtest on mount with default parameters
   useEffect(() => {
     runBacktest(RANGES[rangeIdx]).catch(() => {
-      /* ignore errors on parameter change */
+      /* ignore errors on initial load */
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tickers, initialCapital, monthlyDeposit, leverage, rangeIdx]);
+  }, []);
 
   function exportCsv() {
     if (!data) return;
@@ -75,14 +77,17 @@ export default function Controls() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mb-4 flex flex-col gap-2">
+    <form
+      onSubmit={handleSubmit}
+      className="mb-4 flex flex-col gap-4 p-4 sm:p-6"
+    >
       <textarea
-        className="h-24 w-full rounded border border-neutral-700 bg-neutral-800 p-2 text-neutral-100"
+        className="h-24 w-full rounded-md border border-neutral-700 bg-neutral-800 p-2 text-neutral-100"
         value={tickers}
         onChange={(e) => setInputs({ tickers: e.target.value })}
       />
-      <div className="flex gap-2">
-        <label className="flex flex-col text-sm">
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <label className="flex flex-1 flex-col text-sm">
           Capital
           <input
             type="number"
@@ -93,7 +98,7 @@ export default function Controls() {
             }
           />
         </label>
-        <label className="flex flex-col text-sm">
+        <label className="flex flex-1 flex-col text-sm">
           Monthly
           <input
             type="number"
@@ -104,7 +109,7 @@ export default function Controls() {
             }
           />
         </label>
-        <label className="flex flex-col text-sm">
+        <label className="flex flex-1 flex-col text-sm">
           Leverage
           <input
             type="number"
@@ -118,7 +123,7 @@ export default function Controls() {
         </label>
       </div>
       <div className="flex flex-col">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col items-center gap-2 sm:flex-row">
           <span className="text-sm text-gray-400">Start date</span>
           <input
             type="range"
@@ -129,7 +134,7 @@ export default function Controls() {
             onChange={handleRangeChange}
             className="flex-1"
           />
-          <span className="w-16 text-sm text-gray-400 text-right">
+          <span className="w-16 text-right text-sm text-gray-400">
             {RANGES[rangeIdx]}
           </span>
         </div>
@@ -137,17 +142,17 @@ export default function Controls() {
           Determines how far back to fetch history.
         </p>
       </div>
-      <div className="flex gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row">
         <button
           type="submit"
-          className="rounded bg-blue-600 px-4 py-2 text-white"
+          className="w-full rounded bg-blue-600 px-4 py-2 text-white sm:w-auto"
         >
           Run
         </button>
         <button
           type="button"
           onClick={exportCsv}
-          className="rounded bg-gray-700 px-4 py-2 text-white"
+          className="w-full rounded bg-gray-700 px-4 py-2 text-white sm:w-auto"
         >
           Export CSV
         </button>
