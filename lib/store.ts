@@ -27,12 +27,36 @@ export interface BacktestResult {
   taxTotal: number;
 }
 
+// Inputs used by the backtest. Keeping them in the global store allows every
+// widget to react immediately when the user adjusts parameters in the Controls
+// component.
+export interface BacktestInputs {
+  tickers: string;
+  rangeIdx: number; // index into RANGES array defined in Controls
+  initialCapital: number;
+  monthlyDeposit: number;
+  leverage: number;
+}
+
 interface BacktestState {
   data?: BacktestResult;
+  inputs: BacktestInputs;
   setData: (d: BacktestResult) => void;
+  setInputs: (i: Partial<BacktestInputs>) => void;
 }
+
+const DEFAULT_INPUTS: BacktestInputs = {
+  tickers: "AAPL,MSFT,GOOGL,AMZN,META",
+  rangeIdx: 1, // default to 1y
+  initialCapital: 6000,
+  monthlyDeposit: 2000,
+  leverage: 2,
+};
 
 export const useBacktestStore = create<BacktestState>((set) => ({
   data: undefined,
+  inputs: DEFAULT_INPUTS,
   setData: (d) => set({ data: d }),
+  setInputs: (i) =>
+    set((s) => ({ inputs: { ...s.inputs, ...i } })),
 }));
