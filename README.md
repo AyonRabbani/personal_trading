@@ -1,6 +1,6 @@
 # Personal Trading Dashboard
 
-This project is a Next.js 14 (App Router) scaffold for a margin backtesting dashboard. It includes placeholder components, API routes, and library stubs for future development.
+This project is a responsive Next.js 14 (App Router) dashboard for modeling margin strategies on both desktop and mobile devices. The initial strategy implemented is **dividend farming on margin**, which tracks reinvested dividends, tax accruals, and portfolio metrics over time.
 
 ## Getting Started
 
