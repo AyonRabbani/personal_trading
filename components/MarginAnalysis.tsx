@@ -18,50 +18,69 @@ type MarginSnap = { date: string; loan: number; cash: number; uec: number };
 type Dividend   = { date: string; amount: number };
 type CashFlow   = { date: string; amount: number; note?: string };
 
+/** Row shape for prices: each item is { date, TICKER1: price, TICKER2: price, ... }  */
+type PriceRow = { date: string; [ticker: string]: number | string };
+
 interface Props {
   margin: MarginSnap[];
   dividends?: Dividend[];
   cashFlows?: CashFlow[];
 
-  maintenanceRatio?: number;            // e.g., 0.25
-  reinvestPct?: number;                 // e.g., 0.75 (of monthly dividends)
-  reinvestLeverage?: number;            // e.g., 1.75
-  interestAPR?: number;                 // e.g., 0.08 = 8% annual
-  interestDayCount?: number;            // 365 default
-  borrowTargetPct?: number;             // 0.75 (75% target)
-  borrowTargetBasis?: 'equity' | 'capacity'; // default 'equity'
-  rebalanceAtStart?: boolean;           // default true (borrow on month start after deposits)
-  allowDelever?: boolean;               // default false (only add leverage, never sell to target)
+  /** Optional per-day price table. Example: [{date:'2025-01-01', SPY: 480.2, QQQ: 410.3}] */
+  prices?: PriceRow[];
+
+  /** Knobs */
+  maintenanceRatio?: number;     // e.g., 0.25
+  interestAPR?: number;          // e.g., 0.08
+  interestDayCount?: number;     // 365 by default
+  /** Target to borrow (equity basis) after month-end reset. 0.75 => loan = 75% of equity */
+  borrowTargetPct?: number;      // default 0.75
+
+  /** Keep two rows on month-end: pre actions (D) and post actions (EOM). */
+  showDualMonthEndRows?: boolean; // default true
 }
 
+type Stage = 'D' | 'EOM'; // Daily snapshot vs. Month-end post-actions
+
 type SimRow = MarginSnap & {
-  mv: number;                 // total market value (uec + cash)
-  equity: number;             // mv - loan
-  equityEconomic: number;     // equity - accrued interest MTD
-  mr: number;                 // maintenance requirement ($)
-  buffer: number;             // equity - mr
-  usagePct: number;           // loan / mv
-  equityRatio: number;        // equity / mv
+  stage: Stage;             // 'D' pre EOM, 'EOM' post-reset & re-lever
+  mv: number;               // cash + uec
+  equity: number;           // mv - loan
+  equityEconomic: number;   // equity - accrued interest MTD
+  mr: number;               // maintenance requirement ($)
+  buffer: number;           // equity - mr
+  usagePct: number;         // loan / mv
+  equityRatio: number;      // equity / mv
   monthEnd: boolean;
 
   // Cash/div/interest & flows
-  div: number;                // dividend today
+  div: number;              // dividend today
   divMTD: number;
   divYTD: number;
-  flow: number;               // deposit(+)/withdraw(-) today
-  interestDaily: number;      // interest accrued today
-  interestMTD: number;        // accrued (unsettled) this month
-  interestYTD: number;        // accrued YTD
+  flow: number;             // deposit(+)/withdraw(-) today
+  interestDaily: number;    // interest accrued today
+  interestMTD: number;      // accrued (unsettled) this month
+  interestYTD: number;      // accrued YTD
 
   // Capacity & calls
-  borrowCapacity: number;     // max allowable additional borrowing (capacity - loan)
+  borrowCapacity: number;   // L_max - loan (for display)
   hadCall: boolean;
   callCashNeeded?: number;
   callSellNeeded?: number;
 
+  // Month-end mechanics audit
+  eomLiquidationProceeds?: number; // amount moved from uec -> cash
+  eomLoanPaydown?: number;         // loan repayment from cash
+  eomShortfall?: number;           // if loan couldn't be fully repaid
+  eomBorrowToTarget?: number;      // new borrow to hit target
+  eomTargetLoan?: number;
+
   // Performance metrics
   romMonthly?: number | null;
   rom30d?: number | null;
+
+  // Optional per-day quote map for tickers
+  prices?: Record<string, number>;
 };
 
 function getYMD(d: string) {
@@ -73,7 +92,6 @@ function fmt(n?: number) {
   if (n === undefined || Number.isNaN(n)) return '-';
   return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
 }
-
 function pct(n?: number) {
   if (n === undefined || Number.isNaN(n)) return '-';
   return `${(n * 100).toFixed(1)}%`;
@@ -92,27 +110,43 @@ export default function MarginAnalysis({
   margin,
   dividends = [],
   cashFlows = [],
+  prices = [],
   maintenanceRatio = 0.25,
-  reinvestPct = 0.75,
-  reinvestLeverage = 1.75,
   interestAPR = 0.08,
   interestDayCount = 365,
   borrowTargetPct = 0.75,
-  borrowTargetBasis = 'equity',     // default changed to 'equity'
-  rebalanceAtStart = true,          // default true to match your example
-  allowDelever = false,             // keep conservative unless you want symmetry
+  showDualMonthEndRows = true,
 }: Props) {
+  // Map: date -> total dividend
   const dividendMap = React.useMemo(() => {
     const m = new Map<string, number>();
     for (const d of dividends) m.set(d.date, (m.get(d.date) ?? 0) + d.amount);
     return m;
   }, [dividends]);
 
+  // Map: date -> net cash flow
   const flowMap = React.useMemo(() => {
     const m = new Map<string, number>();
     for (const f of cashFlows) m.set(f.date, (m.get(f.date) ?? 0) + f.amount);
     return m;
   }, [cashFlows]);
+
+  // Map: date -> {ticker: price,...} and list of tickers (dynamic columns)
+  const { priceMap, priceTickers } = React.useMemo(() => {
+    const pMap = new Map<string, Record<string, number>>();
+    let tickers: string[] = [];
+    for (const r of prices) {
+      const cleaned: Record<string, number> = {};
+      const restObj = r as Record<string, unknown>;
+      for (const k of Object.keys(restObj)) {
+        const v = restObj[k];
+        if (k !== 'date' && typeof v === 'number') cleaned[k] = v;
+      }
+      pMap.set(r.date, cleaned);
+      if (tickers.length === 0) tickers = Object.keys(cleaned);
+    }
+    return { priceMap: pMap, priceTickers: tickers };
+  }, [prices]);
 
   const sim = React.useMemo<SimRow[]>(() => {
     if (!margin || margin.length === 0) return [];
@@ -138,45 +172,16 @@ export default function MarginAnalysis({
     const rows: SimRow[] = [];
     const lastIdx = base.length - 1;
 
-    const computeTargetLoan = (equityNow: number) => {
-      if (borrowTargetBasis === 'equity') {
-        return Math.max(0, borrowTargetPct * equityNow);
-      } else {
-        // capacity basis
-        const lMax = Math.max(0, equityNow * (1 / maintenanceRatio - 1));
-        return Math.max(0, borrowTargetPct * lMax);
-      }
-    };
-
-    const rebalanceToTarget = (equityNow: number) => {
-      const target = computeTargetLoan(equityNow);
-      const delta = target - loan;
-      if (delta > 0) {
-        // borrow more, buy same notional
-        uec  += delta;
-        loan += delta;
-      } else if (allowDelever && delta < 0) {
-        // sell down and repay loan symmetrically
-        const cut = Math.min(-delta, uec); // don't sell below zero
-        uec  -= cut;
-        loan -= cut;
-      }
-      // cash unchanged; equity unchanged by this leverage trade
-    };
-
     for (let i = 0; i < base.length; i++) {
       const snap = base[i];
       const ym = getYMD(snap.date);
-      const prevYM = i > 0 ? getYMD(base[i - 1].date) : null;
-      const isMonthStart = !prevYM || prevYM.m !== ym.m || prevYM.y !== ym.y;
-
       if (ym.y !== currentYear) {
         currentYear = ym.y;
         yearAccDiv = 0;
         yearInterestAccrued = 0;
       }
 
-      // 1) Apply price-only return from baseline uec series
+      // 1) Apply price-only return from baseline uec series (on whatever uec we currently hold)
       if (i > 0) {
         const prev = base[i - 1].uec;
         const curr = base[i].uec;
@@ -214,13 +219,6 @@ export default function MarginAnalysis({
         }
       }
 
-      // >>> Rebalance at month START (after deposits/divs)
-      if (rebalanceAtStart && isMonthStart) {
-        const mvNow = Math.max(uec + cash, 0);
-        const equityNow = mvNow - loan;
-        rebalanceToTarget(equityNow);
-      }
-
       // 4) Accrue daily interest (charged at month-end)
       let interestDaily = 0;
       if (loan > 0 && interestAPR > 0) {
@@ -230,43 +228,48 @@ export default function MarginAnalysis({
         yearInterestAccrued  += interestDaily;
       }
 
-      // 5) Diagnostics
-      const mv = Math.max(uec + cash, 0);
-      const equity = mv - loan;
-      const mr = maintenanceRatio * mv;
-      const buffer = equity - mr;
-      const usagePct = mv > 0 ? loan / mv : 0;
-      const equityRatio = mv > 0 ? equity / mv : 1;
-      const hadCall = buffer < 0;
+      // 5) Diagnostics (pre month-end)
+      const mvPre = Math.max(uec + cash, 0);
+      const equityPre = mvPre - loan;
+      const mrPre = maintenanceRatio * mvPre;
+      const bufferPre = equityPre - mrPre;
+      const usagePctPre = mvPre > 0 ? loan / mvPre : 0;
+      const equityRatioPre = mvPre > 0 ? equityPre / mvPre : 1;
+      const hadCallPre = bufferPre < 0;
 
-      const callCashNeeded = hadCall ? mr - equity : 0;
-      const callSellNeeded = hadCall ? (mr - equity) / maintenanceRatio : 0;
+      const callCashNeeded = hadCallPre ? mrPre - equityPre : 0;
+      const callSellNeeded = hadCallPre ? (mrPre - equityPre) / maintenanceRatio : 0;
 
-      // Capacity for display
-      const lMax = Math.max(0, equity * (1 / maintenanceRatio - 1));
-      const borrowCapacity = Math.max(0, lMax - loan);
+      // Capacity (display)
+      const lMaxPre = Math.max(0, equityPre * (1 / maintenanceRatio - 1));
+      const borrowCapacityPre = Math.max(0, lMaxPre - loan);
 
+      // Month boundary?
       const nextYM = i < lastIdx ? getYMD(base[i + 1].date) : null;
       const isMonthEnd = !nextYM || nextYM.m !== ym.m || nextYM.y !== ym.y;
 
+      // Track averages
       monthLoanSum += loan;
       monthLoanDays += 1;
 
-      const equityEconomic = equity - monthInterestAccrued;
+      // Economic equity subtracts accrued (unsettled) interest
+      const equityEconomicPre = equityPre - monthInterestAccrued;
 
-      // Record row (pre-settlement state)
-      const row: SimRow = {
+      // --- Push DAILY (pre EOM) row ---
+      const pricesToday = priceMap.get(snap.date) || undefined;
+      const dailyRow: SimRow = {
+        stage: 'D',
         date: snap.date,
         loan,
         cash,
         uec,
-        mv,
-        equity,
-        equityEconomic,
-        mr,
-        buffer,
-        usagePct,
-        equityRatio,
+        mv: mvPre,
+        equity: equityPre,
+        equityEconomic: equityEconomicPre,
+        mr: mrPre,
+        buffer: bufferPre,
+        usagePct: usagePctPre,
+        equityRatio: equityRatioPre,
         monthEnd: isMonthEnd,
         div,
         divMTD: monthAccDiv,
@@ -275,14 +278,15 @@ export default function MarginAnalysis({
         interestDaily,
         interestMTD: monthInterestAccrued,
         interestYTD: yearInterestAccrued,
-        borrowCapacity,
-        hadCall,
-        callCashNeeded: hadCall ? Math.max(0, callCashNeeded) : undefined,
-        callSellNeeded: hadCall ? Math.max(0, callSellNeeded) : undefined,
+        borrowCapacity: borrowCapacityPre,
+        hadCall: hadCallPre,
+        callCashNeeded: hadCallPre ? Math.max(0, callCashNeeded) : undefined,
+        callSellNeeded: hadCallPre ? Math.max(0, callSellNeeded) : undefined,
         romMonthly: null,
         rom30d: null,
+        prices: pricesToday,
       };
-      rows.push(row);
+      rows.push(dailyRow);
 
       // Rolling 30-row ROM using economic equity
       if (rows.length >= 31) {
@@ -291,13 +295,12 @@ export default function MarginAnalysis({
         const pnl30 = rows[idx].equityEconomic - prior.equityEconomic;
         const slice = rows.slice(idx - 29, idx + 1);
         const avgLoan30 = slice.reduce((s, r) => s + r.loan, 0) / slice.length || 0;
-        const rom30 = avgLoan30 !== 0 ? pnl30 / Math.abs(avgLoan30) : 0;
-        rows[idx].rom30d = rom30;
+        rows[idx].rom30d = avgLoan30 !== 0 ? pnl30 / Math.abs(avgLoan30) : 0;
       }
 
-      // === Month-end actions ===
+      // === Month-end actions: SELL ALL → PAY LOAN → RE-LEVER TO TARGET (equity basis) ===
       if (isMonthEnd) {
-        // A) Settle interest
+        // A) Settle interest first (reduces cash or increases loan)
         if (monthInterestAccrued > 0) {
           if (cash >= monthInterestAccrued) {
             cash -= monthInterestAccrued;
@@ -308,33 +311,88 @@ export default function MarginAnalysis({
           }
         }
 
-        // B) Reinvest % of monthly dividends at leverage
-        if (monthAccDiv > 0 && reinvestPct > 0 && reinvestLeverage > 0) {
-          const equityToDeploy = reinvestPct * monthAccDiv;
-          const notional = equityToDeploy * reinvestLeverage;
-          if (notional > 0) {
-            const useCash = Math.max(0, Math.min(cash, equityToDeploy));
-            uec  += notional;
-            loan += notional - useCash;
-            cash -= useCash;
-          }
+        // B) Liquidate all securities
+        const liquidationProceeds = uec;
+        cash += liquidationProceeds;
+        uec = 0;
+
+        // C) Pay down loan fully from cash (if possible)
+        const loanPaydown = Math.min(loan, cash);
+        loan -= loanPaydown;
+        cash -= loanPaydown;
+        const shortfall = loan > 0 ? loan : 0; // if > 0, still under water
+
+        // D) Re-lever from clean slate (equity = cash - loan)
+        const equityNow = Math.max(0, cash - loan);
+        const targetLoan = Math.max(0, borrowTargetPct * equityNow);
+        let borrowed = 0;
+        if (targetLoan > loan) {
+          borrowed = targetLoan - loan; // usually = targetLoan if loan==0
+          loan += borrowed;
+          uec += borrowed;             // buy securities with borrowed funds only
+        } else if (targetLoan < loan) {
+          // Shouldn't happen after payoff, but keep symmetry to be safe:
+          const repay = Math.min(loan - targetLoan, cash);
+          loan -= repay;
+          cash -= repay;
+          // If still above target and no cash, we could sell UEC, but you specified sell-all only at month-end.
         }
 
-        // C) If you prefer end-of-month rebalancing instead of start
-        if (!rebalanceAtStart) {
-          const mvNow = Math.max(uec + cash, 0);
-          const equityNow = mvNow - loan;
-          rebalanceToTarget(equityNow);
-        }
+        // Post diagnostics
+        const mvPost = Math.max(uec + cash, 0);
+        const equityPost = mvPost - loan;
+        const mrPost = maintenanceRatio * mvPost;
+        const bufferPost = equityPost - mrPost;
+        const usagePctPost = mvPost > 0 ? loan / mvPost : 0;
+        const equityRatioPost = mvPost > 0 ? equityPost / mvPost : 1;
 
-        // D) ROM for the month (after settlements/trades)
-        const monthEndEquity = (uec + cash) - loan;
+        // Month ROM (computed on post-action snapshot)
+        const monthEndEquity = equityPost;
         const pnl = monthEndEquity - monthStartEquity;
         const avgLoan = monthLoanDays > 0 ? monthLoanSum / monthLoanDays : 0;
         const rom = avgLoan !== 0 ? pnl / Math.abs(avgLoan) : 0;
-        rows[rows.length - 1].romMonthly = rom;
 
-        // reset month trackers
+        if (showDualMonthEndRows) {
+          rows.push({
+            stage: 'EOM',
+            date: snap.date,
+            loan,
+            cash,
+            uec,
+            mv: mvPost,
+            equity: equityPost,
+            equityEconomic: equityPost, // after settlement, economic==accounting
+            mr: mrPost,
+            buffer: bufferPost,
+            usagePct: usagePctPost,
+            equityRatio: equityRatioPost,
+            monthEnd: true,
+            div: 0,
+            divMTD: 0,
+            divYTD: yearAccDiv,
+            flow: 0,
+            interestDaily: 0,
+            interestMTD: 0,
+            interestYTD: yearInterestAccrued,
+            borrowCapacity: Math.max(0, Math.max(0, equityPost * (1 / maintenanceRatio - 1)) - loan),
+            hadCall: bufferPost < 0,
+            romMonthly: rom,
+            rom30d: null,
+            eomLiquidationProceeds: liquidationProceeds,
+            eomLoanPaydown: loanPaydown,
+            eomShortfall: shortfall || undefined,
+            eomBorrowToTarget: borrowed || undefined,
+            eomTargetLoan: targetLoan,
+            prices: priceMap.get(snap.date) || undefined,
+            callCashNeeded: undefined,
+            callSellNeeded: undefined,
+          });
+        } else {
+          // If not showing dual rows, attach ROM to the pre row
+          rows[rows.length - 1].romMonthly = rom;
+        }
+
+        // Reset month trackers
         monthAccDiv = 0;
         monthInterestAccrued = 0;
         monthStartEquity = monthEndEquity;
@@ -348,29 +406,101 @@ export default function MarginAnalysis({
     margin,
     dividendMap,
     flowMap,
+    priceMap,
     maintenanceRatio,
-    reinvestPct,
-    reinvestLeverage,
     interestAPR,
     interestDayCount,
     borrowTargetPct,
-    borrowTargetBasis,
-    rebalanceAtStart,
-    allowDelever,
+    showDualMonthEndRows,
   ]);
 
-  const marginCalls = React.useMemo(
-    () =>
-      sim.filter((r) => r.hadCall).map((r) => ({
-        date: r.date,
-        callCashNeeded: r.callCashNeeded ?? 0,
-        callSellNeeded: r.callSellNeeded ?? 0,
-        buffer: r.buffer,
-      })),
+  // For charts, show the post-EOM snapshot instead of the pre-EOM daily one.
+  const simForCharts = React.useMemo(
+    () => sim.filter(r => !(r.monthEnd && r.stage === 'D')),
     [sim]
   );
 
-  const latest = sim.at(-1);
+  const marginCalls = React.useMemo(
+    () => sim.filter((r) => r.hadCall).map((r) => ({
+      date: r.date + (r.stage === 'EOM' ? ' (EOM)' : ''),
+      callCashNeeded: r.callCashNeeded ?? 0,
+      callSellNeeded: r.callSellNeeded ?? 0,
+      buffer: r.buffer,
+    })), [sim]
+  );
+
+  const latest = simForCharts.at(-1);
+
+  // === CSV Export ===
+  const handleExportCSV = React.useCallback(() => {
+    if (!sim.length) return;
+
+    const baseCols = [
+      'date','stage','cash','uec','mv','loan','equity','mr','buffer','usagePct','equityRatio',
+      'div','divMTD','divYTD','flow','interestDaily','interestMTD','interestYTD',
+      'borrowCapacity','rom30d','romMonthly',
+      'eomLiquidationProceeds','eomLoanPaydown','eomShortfall','eomBorrowToTarget','eomTargetLoan'
+    ];
+
+    const cols = [...baseCols, ...priceTickers.map(t => `price:${t}`)];
+
+    const rows = sim.map(r => {
+      const rec: Record<string, string | number> = {
+        date: r.date,
+        stage: r.stage,
+        cash: r.cash ?? '',
+        uec: r.uec ?? '',
+        mv: r.mv ?? '',
+        loan: r.loan ?? '',
+        equity: r.equity ?? '',
+        mr: r.mr ?? '',
+        buffer: r.buffer ?? '',
+        usagePct: r.usagePct ?? '',
+        equityRatio: r.equityRatio ?? '',
+        div: r.div ?? '',
+        divMTD: r.divMTD ?? '',
+        divYTD: r.divYTD ?? '',
+        flow: r.flow ?? '',
+        interestDaily: r.interestDaily ?? '',
+        interestMTD: r.interestMTD ?? '',
+        interestYTD: r.interestYTD ?? '',
+        borrowCapacity: r.borrowCapacity ?? '',
+        rom30d: r.rom30d ?? '',
+        romMonthly: r.romMonthly ?? '',
+        eomLiquidationProceeds: r.eomLiquidationProceeds ?? '',
+        eomLoanPaydown: r.eomLoanPaydown ?? '',
+        eomShortfall: r.eomShortfall ?? '',
+        eomBorrowToTarget: r.eomBorrowToTarget ?? '',
+        eomTargetLoan: r.eomTargetLoan ?? '',
+      };
+      for (const t of priceTickers) {
+        rec[`price:${t}`] = r.prices?.[t] ?? '';
+      }
+      return rec;
+    });
+
+    const csv = [
+      cols.join(','),
+      ...rows.map(row =>
+        cols.map(k => {
+          const v = (row as Record<string, string | number | undefined>)[k];
+          if (v === null || v === undefined) return '';
+          const s = String(v);
+          return s.includes(',') || s.includes('"') ? `"${s.replace(/"/g, '""')}"` : s;
+        }).join(',')
+      )
+    ].join('\n');
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'daily_ledger.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, [sim, priceTickers]);
 
   return (
     <div className="space-y-6">
@@ -384,10 +514,10 @@ export default function MarginAnalysis({
         <SummaryCard label="Maint. Buffer" value={fmt(latest?.buffer)} danger={!!latest && latest.buffer < 0} />
       </div>
 
-      {/* Dollar Chart */}
+      {/* Dollar Chart (post-EOM snapshots) */}
       <div className="h-72 w-full">
         <ResponsiveContainer>
-          <LineChart data={sim}>
+          <LineChart data={simForCharts}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="date" hide />
             <YAxis />
@@ -405,10 +535,10 @@ export default function MarginAnalysis({
         </ResponsiveContainer>
       </div>
 
-      {/* Equity Ratio vs Maintenance */}
+      {/* Equity Ratio vs Maintenance (post-EOM snapshots) */}
       <div className="h-72 w-full">
         <ResponsiveContainer>
-          <AreaChart data={sim}>
+          <AreaChart data={simForCharts}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="date" hide />
             <YAxis domain={[0, 1]} tickFormatter={(v) => pct(v)} />
@@ -433,66 +563,96 @@ export default function MarginAnalysis({
         </div>
       )}
 
+      {/* Controls */}
+      <div className="flex items-center gap-3">
+        <button
+          onClick={handleExportCSV}
+          className="px-3 py-1.5 rounded bg-slate-800 text-white text-xs hover:bg-slate-700"
+        >
+          Export CSV
+        </button>
+        <span className="text-xs text-slate-500">
+          Month-end rule: sell all → pay loan → borrow {Math.round(borrowTargetPct*100)}% of equity → buy with borrowed only.
+        </span>
+      </div>
+
       {/* Daily Ledger Table */}
       <div>
-        <h3 className="font-semibold mb-2">Daily Ledger</h3>
+        <h3 className="font-semibold mb-2">Daily Ledger (pre and post month-end)</h3>
         <div className="overflow-x-auto overflow-y-auto max-h-[28rem] rounded border border-slate-200">
-          <table className="min-w-[1400px] w-full text-xs">
+          <table className="min-w-[1600px] w-full text-xs">
             <thead className="bg-slate-50 sticky top-0">
               <tr className="text-left">
                 <th className="p-2">Date</th>
+                <th className="p-2">Stage</th>
                 <th className="p-2 text-right">Cash</th>
+                <th className="p-2 text-right">UEC</th>
                 <th className="p-2 text-right">Market Value</th>
+                <th className="p-2 text-right">Loan</th>
+                <th className="p-2 text-right">Equity</th>
+                <th className="p-2 text-right">Maint ($)</th>
+                <th className="p-2 text-right">Buffer</th>
+                <th className="p-2 text-right">Equity Ratio</th>
+                <th className="p-2 text-right">Usage %</th>
                 <th className="p-2 text-right">Dividend</th>
                 <th className="p-2 text-right">Div MTD</th>
                 <th className="p-2 text-right">Div YTD</th>
                 <th className="p-2 text-right">Flow</th>
-                <th className="p-2 text-right">Loan</th>
-                <th className="p-2 text-right">Maint ($)</th>
-                <th className="p-2 text-right">Buffer</th>
-                <th className="p-2 text-right">Equity</th>
-                <th className="p-2 text-right">Equity Ratio</th>
-                <th className="p-2 text-right">Usage %</th>
                 <th className="p-2 text-right">Interest (day)</th>
                 <th className="p-2 text-right">Interest MTD</th>
                 <th className="p-2 text-right">Borrow Cap</th>
                 <th className="p-2 text-right">Excess ROM (30d)</th>
                 <th className="p-2 text-right">ROM (Month)</th>
-                <th className="p-2 text-right">Call Cash</th>
-                <th className="p-2 text-right">Call Sell</th>
+                <th className="p-2 text-right">EOM Proceeds</th>
+                <th className="p-2 text-right">EOM Loan Paydown</th>
+                <th className="p-2 text-right">EOM Shortfall</th>
+                <th className="p-2 text-right">EOM Borrowed</th>
+                <th className="p-2 text-right">EOM Target Loan</th>
+                {priceTickers.map(t => (
+                  <th key={t} className="p-2 text-right">{t}</th>
+                ))}
               </tr>
             </thead>
             <tbody>
               {sim.map((r) => (
-                <tr key={r.date} className="odd:bg-white even:bg-slate-50/50">
-                  <td className="p-2 whitespace-nowrap">{r.date}{r.monthEnd ? ' •' : ''}</td>
+                <tr key={`${r.date}-${r.stage}`} className={`${r.stage === 'EOM' ? 'bg-amber-50' : ''} odd:bg-white even:bg-slate-50/50`}>
+                  <td className="p-2 whitespace-nowrap">{r.date}</td>
+                  <td className="p-2">{r.stage}</td>
                   <td className="p-2 text-right">{fmt(r.cash)}</td>
+                  <td className="p-2 text-right">{fmt(r.uec)}</td>
                   <td className="p-2 text-right">{fmt(r.mv)}</td>
+                  <td className="p-2 text-right">{fmt(r.loan)}</td>
+                  <td className="p-2 text-right">{fmt(r.equity)}</td>
+                  <td className="p-2 text-right">{fmt(r.mr)}</td>
+                  <td className={`p-2 text-right ${r.buffer < 0 ? 'text-red-600 font-semibold' : ''}`}>{fmt(r.buffer)}</td>
+                  <td className="p-2 text-right">{pct(r.equityRatio)}</td>
+                  <td className="p-2 text-right">{pct(r.usagePct)}</td>
                   <td className="p-2 text-right">{r.div ? fmt(r.div) : '-'}</td>
                   <td className="p-2 text-right">{r.divMTD ? fmt(r.divMTD) : '-'}</td>
                   <td className="p-2 text-right">{r.divYTD ? fmt(r.divYTD) : '-'}</td>
                   <td className="p-2 text-right">{r.flow ? fmt(r.flow) : '-'}</td>
-                  <td className="p-2 text-right">{fmt(r.loan)}</td>
-                  <td className="p-2 text-right">{fmt(r.mr)}</td>
-                  <td className={`p-2 text-right ${r.buffer < 0 ? 'text-red-600 font-semibold' : ''}`}>{fmt(r.buffer)}</td>
-                  <td className="p-2 text-right">{fmt(r.equity)}</td>
-                  <td className="p-2 text-right">{pct(r.equityRatio)}</td>
-                  <td className="p-2 text-right">{pct(r.usagePct)}</td>
                   <td className="p-2 text-right">{r.interestDaily ? fmt(r.interestDaily) : '-'}</td>
                   <td className="p-2 text-right">{r.interestMTD ? fmt(r.interestMTD) : '-'}</td>
                   <td className="p-2 text-right">{r.borrowCapacity ? fmt(r.borrowCapacity) : '-'}</td>
                   <td className="p-2 text-right">{r.rom30d !== null && r.rom30d !== undefined ? pct(r.rom30d) : '-'}</td>
                   <td className="p-2 text-right">{r.romMonthly !== null && r.romMonthly !== undefined ? pct(r.romMonthly) : '-'}</td>
-                  <td className={`p-2 text-right ${r.hadCall ? 'text-red-600' : ''}`}>{r.callCashNeeded ? fmt(r.callCashNeeded) : '-'}</td>
-                  <td className={`p-2 text-right ${r.hadCall ? 'text-red-600' : ''}`}>{r.callSellNeeded ? fmt(r.callSellNeeded) : '-'}</td>
+                  <td className="p-2 text-right">{r.eomLiquidationProceeds ? fmt(r.eomLiquidationProceeds) : '-'}</td>
+                  <td className="p-2 text-right">{r.eomLoanPaydown ? fmt(r.eomLoanPaydown) : '-'}</td>
+                  <td className={`p-2 text-right ${r.eomShortfall ? 'text-red-600' : ''}`}>{r.eomShortfall ? fmt(r.eomShortfall) : '-'}</td>
+                  <td className="p-2 text-right">{r.eomBorrowToTarget ? fmt(r.eomBorrowToTarget) : '-'}</td>
+                  <td className="p-2 text-right">{r.eomTargetLoan ? fmt(r.eomTargetLoan) : '-'}</td>
+                  {priceTickers.map(t => (
+                    <td key={`${r.date}-${r.stage}-${t}`} className="p-2 text-right">
+                      {r.prices && typeof r.prices[t] === 'number' ? (r.prices[t] as number).toLocaleString() : '-'}
+                    </td>
+                  ))}
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
         <p className="text-xs text-slate-500 mt-2">
-          With <span className="font-semibold">borrowTargetBasis = &apos;equity&apos;</span> and <span className="font-semibold">rebalanceAtStart = true</span>,
-          month N starts with MV = E<sub>N</sub> + {borrowTargetPct * 100}% × E<sub>N</sub>.
+          EOM row shows: <em>sell all</em> → <em>pay loan</em> → <em>borrow {Math.round(borrowTargetPct*100)}% of equity</em> → <em>buy with borrowed only</em>.
         </p>
       </div>
     </div>
