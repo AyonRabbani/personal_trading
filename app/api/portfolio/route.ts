@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
     const weeklyMap = new Map<string, number>();
     const taxes: { date: string; amount: number }[] = [];
     const margin: { date: string; loan: number; cash: number; uec: number }[] = [];
-    const marginCalls: { date: string }[] = [];
+    const dividends: { date: string; amount: number }[] = [];
 
     dates.forEach((date, i) => {
       if (i > 0 && date.getDate() === 1) {
@@ -81,24 +81,20 @@ export async function POST(req: NextRequest) {
           const price = charts[idx].indicators?.adjclose?.[0]?.adjclose?.[i] || 0;
           if (price) holdings[sym] += (investTotal / n) / price;
         });
+        dividends.push({ date: date.toISOString().slice(0, 10), amount: dailyDividend });
       }
 
       const value = symbols.reduce((sum, sym, idx) => {
         const price = charts[idx].indicators?.adjclose?.[0]?.adjclose?.[i] || 0;
         return sum + holdings[sym] * price;
       }, 0);
-      const equity = value + cash - marginLoan;
-      const requirement = value * 0.25;
-      if (equity < requirement) {
-        marginCalls.push({ date: date.toISOString().slice(0, 10) });
-      }
       portfolio.push({ date: date.toISOString().slice(0, 10), value });
       margin.push({ date: date.toISOString().slice(0, 10), loan: marginLoan, cash, uec: value });
     });
 
     const weeklyDividends = Array.from(weeklyMap.entries()).map(([week, amount]) => ({ week, amount }));
 
-    return NextResponse.json({ portfolio, weeklyDividends, taxes, margin, marginCalls });
+    return NextResponse.json({ portfolio, weeklyDividends, taxes, margin, dividends });
   } catch {
     return NextResponse.json({ error: 'data fetch failed' }, { status: 500 });
   }
