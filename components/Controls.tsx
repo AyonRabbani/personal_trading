@@ -1,20 +1,19 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useBacktestStore } from "@/lib/store";
 
 const RANGES: ("6mo" | "1y" | "2y")[] = ["6mo", "1y", "2y"];
-// Use widely traded tickers by default so the initial dashboard load
-// retrieves real market data instead of failing with "No results".
-const DEFAULT_TICKERS = "AAPL,MSFT,GOOGL,AMZN,META";
+// Default tickers set in the store ensure initial data loads with widely
+// traded symbols, avoiding "No results" errors on first render.
 
 export default function Controls() {
-  const [tickers, setTickers] = useState(DEFAULT_TICKERS);
-  const [rangeIdx, setRangeIdx] = useState(1); // default to 1y
-  const [initialCapital, setInitialCapital] = useState(6000);
-  const [monthlyDeposit, setMonthlyDeposit] = useState(2000);
-  const [leverage, setLeverage] = useState(2);
-  const data = useBacktestStore((s) => s.data);
-  const setData = useBacktestStore((s) => s.setData);
+  const { data, inputs, setData, setInputs } = useBacktestStore((s) => ({
+    data: s.data,
+    inputs: s.inputs,
+    setData: s.setData,
+    setInputs: s.setInputs,
+  }));
+  const { tickers, rangeIdx, initialCapital, monthlyDeposit, leverage } = inputs;
 
   async function runBacktest(selectedRange: "6mo" | "1y" | "2y") {
     // allow users to separate tickers by commas, spaces or newlines
@@ -49,18 +48,17 @@ export default function Controls() {
     await runBacktest(RANGES[rangeIdx]);
   }
 
-  async function handleRangeChange(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleRangeChange(e: React.ChangeEvent<HTMLInputElement>) {
     const idx = Number(e.target.value);
-    setRangeIdx(idx);
-    await runBacktest(RANGES[idx]);
+    setInputs({ rangeIdx: idx });
   }
 
   useEffect(() => {
     runBacktest(RANGES[rangeIdx]).catch(() => {
-      /* ignore errors on initial load */
+      /* ignore errors on parameter change */
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [tickers, initialCapital, monthlyDeposit, leverage, rangeIdx]);
 
   function exportCsv() {
     if (!data) return;
@@ -81,7 +79,7 @@ export default function Controls() {
       <textarea
         className="border p-2 h-24 bg-black text-green-400"
         value={tickers}
-        onChange={(e) => setTickers(e.target.value)}
+        onChange={(e) => setInputs({ tickers: e.target.value })}
       />
       <div className="flex gap-2">
         <label className="flex flex-col text-sm">
@@ -90,7 +88,9 @@ export default function Controls() {
             type="number"
             className="border p-1 bg-black text-green-400"
             value={initialCapital}
-            onChange={(e) => setInitialCapital(Number(e.target.value))}
+            onChange={(e) =>
+              setInputs({ initialCapital: Number(e.target.value) })
+            }
           />
         </label>
         <label className="flex flex-col text-sm">
@@ -99,7 +99,9 @@ export default function Controls() {
             type="number"
             className="border p-1 bg-black text-green-400"
             value={monthlyDeposit}
-            onChange={(e) => setMonthlyDeposit(Number(e.target.value))}
+            onChange={(e) =>
+              setInputs({ monthlyDeposit: Number(e.target.value) })
+            }
           />
         </label>
         <label className="flex flex-col text-sm">
@@ -109,7 +111,9 @@ export default function Controls() {
             step={0.1}
             className="border p-1 bg-black text-green-400"
             value={leverage}
-            onChange={(e) => setLeverage(Number(e.target.value))}
+            onChange={(e) =>
+              setInputs({ leverage: Number(e.target.value) })
+            }
           />
         </label>
       </div>
