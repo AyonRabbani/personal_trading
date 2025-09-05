@@ -1,14 +1,39 @@
-import Widget from "@/components/Widget";
+import Section from "@/components/Section";
 
-export default function Dashboard() {
+export default function ResearchPage() {
   return (
-    <main className="grid min-h-screen grid-cols-1 auto-rows-fr gap-4 p-4 md:grid-cols-3">
-      <Widget defaultModule="inputs" />
-      <Widget defaultModule="price" />
-      <Widget defaultModule="metrics" />
-      <Widget defaultModule="portfolio" className="md:col-span-3" />
-      <Widget defaultModule="dividends" />
-      <Widget defaultModule="tax" />
+    <main className="max-w-4xl mx-auto p-4">
+      <Section title="Introduction">
+        <p>
+          This website presents a research-oriented analysis of personal
+          trading strategies. It consolidates observations and simplifies
+          data into accessible narratives.
+        </p>
+      </Section>
+
+      <Section title="Methodology">
+        <p>
+          Data is gathered from publicly available market information and
+          processed with lightweight scripts. Complex visualizations have
+          been removed in favor of direct explanations.
+        </p>
+      </Section>
+
+      <Section title="Findings">
+        <p>
+          Preliminary results indicate trends worth further investigation.
+          Future iterations may expand upon these insights with deeper
+          statistical reviews.
+        </p>
+      </Section>
+
+      <Section title="Conclusion">
+        <p>
+          This simplified presentation focuses on clarity over
+          interactivity, enabling a concise overview suitable for
+          investigative review.
+        </p>
+      </Section>
     </main>
   );
 }

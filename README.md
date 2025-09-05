@@ -1,6 +1,6 @@
-# Personal Trading Dashboard
+# Trading Research Analysis
 
-This project is a responsive Next.js 14 (App Router) dashboard for modeling margin strategies on both desktop and mobile devices. The initial strategy implemented is **dividend farming on margin**, which tracks reinvested dividends, tax accruals, and portfolio metrics over time.
+This project is a simplified Next.js site that presents personal trading research in an investigative format. Visual widgets and complex charts have been removed in favor of concise narrative sections.
 
 ## Getting Started
 
@@ -16,4 +16,4 @@ Run the development server:
 npm run dev
 ```
 
-The app exposes pages for the main dashboard (`/`) and a simple screener (`/screener`).
+The application serves a single research-focused page at the root route (`/`).
