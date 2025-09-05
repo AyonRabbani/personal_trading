@@ -1,3 +1,5 @@
+"use client";
+
 import { create } from "zustand";
 import { TimePoint, Metrics, SeriesMap } from "./types";
 
