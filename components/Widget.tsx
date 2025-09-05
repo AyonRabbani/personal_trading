@@ -62,13 +62,13 @@ export default function Widget({
 
   return (
     <div
-      className={`border p-2 bg-black text-green-400 font-mono h-full ${className}`}
+      className={`h-full rounded-lg border border-neutral-700 bg-neutral-800 p-4 text-neutral-100 ${className}`}
     >
-      <div className="flex justify-end mb-2">
+      <div className="mb-2 flex justify-end">
         <select
           value={module}
           onChange={(e) => setModule(e.target.value as ModuleKey)}
-          className="bg-black text-green-400 border"
+          className="rounded border border-neutral-600 bg-neutral-700 p-1 text-neutral-100"
         >
           {options.map((o) => (
             <option key={o.value} value={o.value}>

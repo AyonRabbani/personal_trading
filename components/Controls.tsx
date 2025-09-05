@@ -77,7 +77,7 @@ export default function Controls() {
   return (
     <form onSubmit={handleSubmit} className="mb-4 flex flex-col gap-2">
       <textarea
-        className="border p-2 h-24 bg-black text-green-400"
+        className="h-24 w-full rounded border border-neutral-700 bg-neutral-800 p-2 text-neutral-100"
         value={tickers}
         onChange={(e) => setInputs({ tickers: e.target.value })}
       />
@@ -86,7 +86,7 @@ export default function Controls() {
           Capital
           <input
             type="number"
-            className="border p-1 bg-black text-green-400"
+            className="rounded border border-neutral-700 bg-neutral-800 p-1 text-neutral-100"
             value={initialCapital}
             onChange={(e) =>
               setInputs({ initialCapital: Number(e.target.value) })
@@ -97,7 +97,7 @@ export default function Controls() {
           Monthly
           <input
             type="number"
-            className="border p-1 bg-black text-green-400"
+            className="rounded border border-neutral-700 bg-neutral-800 p-1 text-neutral-100"
             value={monthlyDeposit}
             onChange={(e) =>
               setInputs({ monthlyDeposit: Number(e.target.value) })
@@ -109,7 +109,7 @@ export default function Controls() {
           <input
             type="number"
             step={0.1}
-            className="border p-1 bg-black text-green-400"
+            className="rounded border border-neutral-700 bg-neutral-800 p-1 text-neutral-100"
             value={leverage}
             onChange={(e) =>
               setInputs({ leverage: Number(e.target.value) })
@@ -138,13 +138,16 @@ export default function Controls() {
         </p>
       </div>
       <div className="flex gap-2">
-        <button type="submit" className="bg-green-700 text-black px-4 py-2">
+        <button
+          type="submit"
+          className="rounded bg-blue-600 px-4 py-2 text-white"
+        >
           Run
         </button>
         <button
           type="button"
           onClick={exportCsv}
-          className="bg-gray-700 text-green-400 px-4 py-2"
+          className="rounded bg-gray-700 px-4 py-2 text-white"
         >
           Export CSV
         </button>
