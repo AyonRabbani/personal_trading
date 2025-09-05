@@ -2,8 +2,8 @@ import type { Metadata, Viewport } from "next";
 import "../styles/globals.css";
 
 export const metadata: Metadata = {
-  title: "Trading Research Analysis",
-  description: "Investigative overview of personal trading strategies",
+  title: "Dividend Dashboard",
+  description: "Track portfolio growth and dividend taxes",
 };
 
 export const viewport: Viewport = {
@@ -18,7 +18,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="antialiased">{children}</body>
+      <body className="antialiased bg-slate-50 text-slate-900">{children}</body>
     </html>
   );
 }
