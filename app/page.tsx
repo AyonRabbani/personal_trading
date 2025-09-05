@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import PortfolioCharts from '@/components/PortfolioCharts';
 import MarginAnalysis from '@/components/MarginAnalysis';
+import OptionsPositions, { OptionPosition } from '@/components/OptionsPositions';
 
 export default function HomePage() {
   const [tickers, setTickers] = useState('');
@@ -17,6 +18,7 @@ export default function HomePage() {
     margin: { date: string; loan: number; cash: number; uec: number }[];
     dividends: { date: string; amount: number }[];
     prices?: { date: string; [ticker: string]: number | string }[];
+    optionsPositions?: OptionPosition[];
   }
   const [data, setData] = useState<PortfolioResponse | null>(null);
   const [loading, setLoading] = useState(false);
@@ -108,6 +110,7 @@ export default function HomePage() {
             taxes={data.taxes}
           />
           <MarginAnalysis margin={data.margin} dividends={data.dividends} prices={data.prices} />
+          <OptionsPositions positions={data.optionsPositions ?? []} />
         </div>
       )}
     </main>
