@@ -16,11 +16,12 @@ export async function POST(req: NextRequest) {
           period2: endDate,
           interval: '1d',
           events: 'dividends',
+          return: 'object',
         })
       )
     );
 
-    const dates = charts[0].timestamp.map((t: number) => new Date(t * 1000));
+    const dates = (charts[0].timestamp || []).map((t: number) => new Date(t * 1000));
     const holdings: Record<string, number> = {};
     const n = symbols.length;
     const initCapital = Number(initial) * Number(leverage);
@@ -44,9 +45,9 @@ export async function POST(req: NextRequest) {
       }
 
       symbols.forEach((sym, idx) => {
-        const events = charts[idx].events?.dividends;
-        const ts = charts[idx].timestamp[i];
-        const div = events && events[ts] ? events[ts].amount : 0;
+        const events = charts[idx].events?.dividends as Record<number, { amount: number }> | undefined;
+        const ts = charts[idx].timestamp?.[i];
+        const div = ts && events && events[ts] ? events[ts].amount : 0;
         if (div) {
           const shares = holdings[sym];
           const amount = shares * div;
@@ -68,7 +69,7 @@ export async function POST(req: NextRequest) {
     const weeklyDividends = Array.from(weeklyMap.entries()).map(([week, amount]) => ({ week, amount }));
 
     return NextResponse.json({ portfolio, weeklyDividends, taxes });
-    } catch {
-      return NextResponse.json({ error: 'data fetch failed' }, { status: 500 });
-    }
+  } catch {
+    return NextResponse.json({ error: 'data fetch failed' }, { status: 500 });
   }
+}
