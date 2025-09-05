@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import PortfolioCharts from '@/components/PortfolioCharts';
+import MarginAnalysis from '@/components/MarginAnalysis';
 
 export default function HomePage() {
   const [tickers, setTickers] = useState('');
@@ -13,6 +14,8 @@ export default function HomePage() {
     portfolio: { date: string; value: number }[];
     weeklyDividends: { week: string; amount: number }[];
     taxes: { date: string; amount: number }[];
+    margin: { date: string; loan: number; cash: number }[];
+    marginCalls: { date: string }[];
   }
   const [data, setData] = useState<PortfolioResponse | null>(null);
   const [loading, setLoading] = useState(false);
@@ -97,12 +100,13 @@ export default function HomePage() {
       </form>
       {loading && <p className="text-center mt-4">Loading...</p>}
       {data && (
-        <div className="mt-8">
+        <div className="mt-8 space-y-8">
           <PortfolioCharts
             portfolio={data.portfolio}
             weeklyDividends={data.weeklyDividends}
             taxes={data.taxes}
           />
+          <MarginAnalysis margin={data.margin} marginCalls={data.marginCalls} />
         </div>
       )}
     </main>
