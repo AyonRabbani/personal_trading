@@ -23,18 +23,21 @@ interface Props {
   dividends?: Dividend[];
   cashFlows?: CashFlow[];
 
-  maintenanceRatio?: number;          // e.g., 0.25
-  reinvestPct?: number;               // e.g., 0.75 (of monthly dividends)
-  reinvestLeverage?: number;          // e.g., 1.75
-  interestAPR?: number;               // e.g., 0.08 = 8% annual
-  interestDayCount?: number;          // 365 default
-  borrowTargetPctOfCapacity?: number; // e.g., 0.75
+  maintenanceRatio?: number;            // e.g., 0.25
+  reinvestPct?: number;                 // e.g., 0.75 (of monthly dividends)
+  reinvestLeverage?: number;            // e.g., 1.75
+  interestAPR?: number;                 // e.g., 0.08 = 8% annual
+  interestDayCount?: number;            // 365 default
+  borrowTargetPct?: number;             // 0.75 (75% target)
+  borrowTargetBasis?: 'equity' | 'capacity'; // default 'equity'
+  rebalanceAtStart?: boolean;           // default true (borrow on month start after deposits)
+  allowDelever?: boolean;               // default false (only add leverage, never sell to target)
 }
 
 type SimRow = MarginSnap & {
   mv: number;                 // total market value (uec + cash)
   equity: number;             // mv - loan
-  equityEconomic: number;     // equity - accrued interest MTD (economic view)
+  equityEconomic: number;     // equity - accrued interest MTD
   mr: number;                 // maintenance requirement ($)
   buffer: number;             // equity - mr
   usagePct: number;           // loan / mv
@@ -51,14 +54,14 @@ type SimRow = MarginSnap & {
   interestYTD: number;        // accrued YTD
 
   // Capacity & calls
-  borrowCapacity: number;     // L_max - loan (post-diagnostics)
+  borrowCapacity: number;     // max allowable additional borrowing (capacity - loan)
   hadCall: boolean;
   callCashNeeded?: number;
   callSellNeeded?: number;
 
   // Performance metrics
-  romMonthly?: number | null; // set on month-end rows
-  rom30d?: number | null;     // rolling 30-row excess return on margin
+  romMonthly?: number | null;
+  rom30d?: number | null;
 };
 
 function getYMD(d: string) {
@@ -94,7 +97,10 @@ export default function MarginAnalysis({
   reinvestLeverage = 1.75,
   interestAPR = 0.08,
   interestDayCount = 365,
-  borrowTargetPctOfCapacity = 0.75,
+  borrowTargetPct = 0.75,
+  borrowTargetBasis = 'equity',     // default changed to 'equity'
+  rebalanceAtStart = true,          // default true to match your example
+  allowDelever = false,             // keep conservative unless you want symmetry
 }: Props) {
   const dividendMap = React.useMemo(() => {
     const m = new Map<string, number>();
@@ -119,11 +125,11 @@ export default function MarginAnalysis({
     let uec  = base[0].uec;
 
     // Month/Year trackers
-    let monthAccDiv = 0;                 // gross dividends received this month
+    let monthAccDiv = 0;
     let monthStartEquity = uec + cash - loan;
-    let monthLoanSum = 0;                // for average loan
+    let monthLoanSum = 0;
     let monthLoanDays = 0;
-    let monthInterestAccrued = 0;        // daily accrual bucket (charged at month-end)
+    let monthInterestAccrued = 0;
 
     let currentYear = getYMD(base[0].date).y;
     let yearAccDiv = 0;
@@ -132,11 +138,38 @@ export default function MarginAnalysis({
     const rows: SimRow[] = [];
     const lastIdx = base.length - 1;
 
+    const computeTargetLoan = (equityNow: number) => {
+      if (borrowTargetBasis === 'equity') {
+        return Math.max(0, borrowTargetPct * equityNow);
+      } else {
+        // capacity basis
+        const lMax = Math.max(0, equityNow * (1 / maintenanceRatio - 1));
+        return Math.max(0, borrowTargetPct * lMax);
+      }
+    };
+
+    const rebalanceToTarget = (equityNow: number) => {
+      const target = computeTargetLoan(equityNow);
+      const delta = target - loan;
+      if (delta > 0) {
+        // borrow more, buy same notional
+        uec  += delta;
+        loan += delta;
+      } else if (allowDelever && delta < 0) {
+        // sell down and repay loan symmetrically
+        const cut = Math.min(-delta, uec); // don't sell below zero
+        uec  -= cut;
+        loan -= cut;
+      }
+      // cash unchanged; equity unchanged by this leverage trade
+    };
+
     for (let i = 0; i < base.length; i++) {
       const snap = base[i];
-
-      // Date parts
       const ym = getYMD(snap.date);
+      const prevYM = i > 0 ? getYMD(base[i - 1].date) : null;
+      const isMonthStart = !prevYM || prevYM.m !== ym.m || prevYM.y !== ym.y;
+
       if (ym.y !== currentYear) {
         currentYear = ym.y;
         yearAccDiv = 0;
@@ -153,7 +186,7 @@ export default function MarginAnalysis({
         uec = base[0].uec;
       }
 
-      // 2) Dividends today → reduce loan first, excess to cash
+      // 2) Dividends → reduce loan first, excess to cash
       const div = dividendMap.get(snap.date) ?? 0;
       if (div > 0) {
         const pay = Math.min(div, loan);
@@ -164,22 +197,28 @@ export default function MarginAnalysis({
         yearAccDiv  += div;
       }
 
-      // 3) Deposits / Withdrawals today
+      // 3) Deposits / Withdrawals
       const flow = flowMap.get(snap.date) ?? 0;
       if (flow !== 0) {
         if (flow > 0) {
           cash += flow; // deposit
         } else {
-          // withdrawal: use cash first, then borrow if needed
           const w = -flow;
           if (cash >= w) {
             cash -= w;
           } else {
             const short = w - cash;
             cash = 0;
-            loan += short; // borrow to fund the remaining withdrawal
+            loan += short; // borrow to fund withdrawal
           }
         }
+      }
+
+      // >>> Rebalance at month START (after deposits/divs)
+      if (rebalanceAtStart && isMonthStart) {
+        const mvNow = Math.max(uec + cash, 0);
+        const equityNow = mvNow - loan;
+        rebalanceToTarget(equityNow);
       }
 
       // 4) Accrue daily interest (charged at month-end)
@@ -191,7 +230,7 @@ export default function MarginAnalysis({
         yearInterestAccrued  += interestDaily;
       }
 
-      // 5) Compute diagnostics
+      // 5) Diagnostics
       const mv = Math.max(uec + cash, 0);
       const equity = mv - loan;
       const mr = maintenanceRatio * mv;
@@ -200,27 +239,23 @@ export default function MarginAnalysis({
       const equityRatio = mv > 0 ? equity / mv : 1;
       const hadCall = buffer < 0;
 
-      // Margin call sizing
       const callCashNeeded = hadCall ? mr - equity : 0;
       const callSellNeeded = hadCall ? (mr - equity) / maintenanceRatio : 0;
 
-      // Capacity now
+      // Capacity for display
       const lMax = Math.max(0, equity * (1 / maintenanceRatio - 1));
       const borrowCapacity = Math.max(0, lMax - loan);
 
-      // Month boundary?
       const nextYM = i < lastIdx ? getYMD(base[i + 1].date) : null;
       const isMonthEnd = !nextYM || nextYM.m !== ym.m || nextYM.y !== ym.y;
 
-      // Track averages
       monthLoanSum += loan;
       monthLoanDays += 1;
 
-      // Pre-month-end economic equity (subtract this month's accrued interest)
       const equityEconomic = equity - monthInterestAccrued;
 
-      // Build row (pre month-end trades)
-      rows.push({
+      // Record row (pre-settlement state)
+      const row: SimRow = {
         date: snap.date,
         loan,
         cash,
@@ -246,9 +281,10 @@ export default function MarginAnalysis({
         callSellNeeded: hadCall ? Math.max(0, callSellNeeded) : undefined,
         romMonthly: null,
         rom30d: null,
-      });
+      };
+      rows.push(row);
 
-      // Rolling 30-row excess return on margin (equityEconomic PnL / avg loan)
+      // Rolling 30-row ROM using economic equity
       if (rows.length >= 31) {
         const idx = rows.length - 1;
         const prior = rows[idx - 30];
@@ -261,7 +297,7 @@ export default function MarginAnalysis({
 
       // === Month-end actions ===
       if (isMonthEnd) {
-        // A) Settle interest: pay from cash; if short, capitalize to loan
+        // A) Settle interest
         if (monthInterestAccrued > 0) {
           if (cash >= monthInterestAccrued) {
             cash -= monthInterestAccrued;
@@ -272,13 +308,11 @@ export default function MarginAnalysis({
           }
         }
 
-        // B) Reinvest reinvestPct of this month's dividends at reinvestLeverage
+        // B) Reinvest % of monthly dividends at leverage
         if (monthAccDiv > 0 && reinvestPct > 0 && reinvestLeverage > 0) {
           const equityToDeploy = reinvestPct * monthAccDiv;
           const notional = equityToDeploy * reinvestLeverage;
-
           if (notional > 0) {
-            // Use cash for the equity portion; if cash < equityToDeploy, the rest effectively gets borrowed
             const useCash = Math.max(0, Math.min(cash, equityToDeploy));
             uec  += notional;
             loan += notional - useCash;
@@ -286,35 +320,26 @@ export default function MarginAnalysis({
           }
         }
 
-        // C) Borrow up to target (no delever)
-        {
+        // C) If you prefer end-of-month rebalancing instead of start
+        if (!rebalanceAtStart) {
           const mvNow = Math.max(uec + cash, 0);
           const equityNow = mvNow - loan;
-          const lMax2 = Math.max(0, equityNow * (1 / maintenanceRatio - 1));
-          const targetLoan = Math.max(0, borrowTargetPctOfCapacity * lMax2);
-
-          if (loan < targetLoan) {
-            const delta = targetLoan - loan;
-            uec  += delta;
-            loan += delta;
-          }
+          rebalanceToTarget(equityNow);
         }
 
-        // D) Compute ROM for the month (after interest settlement, reinvest, borrow-to-target)
-        {
-          const monthEndEquity = (uec + cash) - loan;
-          const pnl = monthEndEquity - monthStartEquity;
-          const avgLoan = monthLoanDays > 0 ? monthLoanSum / monthLoanDays : 0;
-          const rom = avgLoan !== 0 ? pnl / Math.abs(avgLoan) : 0;
-          rows[rows.length - 1].romMonthly = rom;
+        // D) ROM for the month (after settlements/trades)
+        const monthEndEquity = (uec + cash) - loan;
+        const pnl = monthEndEquity - monthStartEquity;
+        const avgLoan = monthLoanDays > 0 ? monthLoanSum / monthLoanDays : 0;
+        const rom = avgLoan !== 0 ? pnl / Math.abs(avgLoan) : 0;
+        rows[rows.length - 1].romMonthly = rom;
 
-          // reset month trackers
-          monthAccDiv = 0;
-          monthInterestAccrued = 0;
-          monthStartEquity = monthEndEquity;
-          monthLoanSum = 0;
-          monthLoanDays = 0;
-        }
+        // reset month trackers
+        monthAccDiv = 0;
+        monthInterestAccrued = 0;
+        monthStartEquity = monthEndEquity;
+        monthLoanSum = 0;
+        monthLoanDays = 0;
       }
     }
 
@@ -328,7 +353,10 @@ export default function MarginAnalysis({
     reinvestLeverage,
     interestAPR,
     interestDayCount,
-    borrowTargetPctOfCapacity,
+    borrowTargetPct,
+    borrowTargetBasis,
+    rebalanceAtStart,
+    allowDelever,
   ]);
 
   const marginCalls = React.useMemo(
@@ -463,8 +491,8 @@ export default function MarginAnalysis({
           </table>
         </div>
         <p className="text-xs text-slate-500 mt-2">
-          Excess ROM (30d) = 30-row equity P&amp;L (economic) / avg loan over the same window.
-          Economic equity subtracts this month&apos;s accrued (unsettled) interest from equity.
+          With <span className="font-semibold">borrowTargetBasis = &apos;equity&apos;</span> and <span className="font-semibold">rebalanceAtStart = true</span>,
+          month N starts with MV = E<sub>N</sub> + {borrowTargetPct * 100}% × E<sub>N</sub>.
         </p>
       </div>
     </div>
