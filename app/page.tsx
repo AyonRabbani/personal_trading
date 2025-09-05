@@ -14,7 +14,7 @@ export default function HomePage() {
     portfolio: { date: string; value: number }[];
     weeklyDividends: { week: string; amount: number }[];
     taxes: { date: string; amount: number }[];
-    margin: { date: string; loan: number; cash: number }[];
+    margin: { date: string; loan: number; cash: number; uec: number }[];
     marginCalls: { date: string }[];
   }
   const [data, setData] = useState<PortfolioResponse | null>(null);
