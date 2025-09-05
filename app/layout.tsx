@@ -2,8 +2,8 @@ import type { Metadata, Viewport } from "next";
 import "../styles/globals.css";
 
 export const metadata: Metadata = {
-  title: "Personal Trading Dashboard",
-  description: "Margin strategy backtesting",
+  title: "Trading Research Analysis",
+  description: "Investigative overview of personal trading strategies",
 };
 
 export const viewport: Viewport = {
