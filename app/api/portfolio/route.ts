@@ -24,23 +24,33 @@ export async function POST(req: NextRequest) {
     const dates = (charts[0].timestamp || []).map((t: number) => new Date(t * 1000));
     const holdings: Record<string, number> = {};
     const n = symbols.length;
-    const initCapital = Number(initial) * Number(leverage);
+    const targetLev = Math.min(Number(leverage), 1.75);
+    const initCapital = Number(initial) * targetLev;
 
     symbols.forEach((sym, idx) => {
       const price = charts[idx].indicators?.adjclose?.[0]?.adjclose?.[0] || 0;
       holdings[sym] = price ? (initCapital / n) / price : 0;
     });
 
+    let marginLoan = initCapital - Number(initial);
+    let cash = 0;
+
     const portfolio: { date: string; value: number }[] = [];
     const weeklyMap = new Map<string, number>();
     const taxes: { date: string; amount: number }[] = [];
+    const margin: { date: string; loan: number; cash: number }[] = [];
+    const marginCalls: { date: string }[] = [];
 
     dates.forEach((date, i) => {
       if (i > 0 && date.getDate() === 1) {
-        const monthlyCapital = Number(monthly) * Number(leverage);
+        const investEquity = Number(monthly) + cash;
+        const investTotal = investEquity * targetLev;
+        const borrow = investTotal - investEquity;
+        marginLoan += borrow;
+        cash = 0;
         symbols.forEach((sym, idx) => {
           const price = charts[idx].indicators?.adjclose?.[0]?.adjclose?.[i] || 0;
-          if (price) holdings[sym] += (monthlyCapital / n) / price;
+          if (price) holdings[sym] += (investTotal / n) / price;
         });
       }
 
@@ -51,8 +61,8 @@ export async function POST(req: NextRequest) {
         if (div) {
           const shares = holdings[sym];
           const amount = shares * div;
-          const price = charts[idx].indicators?.adjclose?.[0]?.adjclose?.[i] || 0;
-          if (price) holdings[sym] += amount / price;
+          marginLoan = Math.max(marginLoan - amount, 0);
+          cash += amount;
           const weekKey = startOfWeek(date).toISOString().slice(0, 10);
           weeklyMap.set(weekKey, (weeklyMap.get(weekKey) || 0) + amount);
           taxes.push({ date: date.toISOString().slice(0, 10), amount: amount * 0.15 });
@@ -63,12 +73,18 @@ export async function POST(req: NextRequest) {
         const price = charts[idx].indicators?.adjclose?.[0]?.adjclose?.[i] || 0;
         return sum + holdings[sym] * price;
       }, 0);
+      const equity = value + cash - marginLoan;
+      const requirement = value * 0.25;
+      if (equity < requirement) {
+        marginCalls.push({ date: date.toISOString().slice(0, 10) });
+      }
       portfolio.push({ date: date.toISOString().slice(0, 10), value });
+      margin.push({ date: date.toISOString().slice(0, 10), loan: marginLoan, cash });
     });
 
     const weeklyDividends = Array.from(weeklyMap.entries()).map(([week, amount]) => ({ week, amount }));
 
-    return NextResponse.json({ portfolio, weeklyDividends, taxes });
+    return NextResponse.json({ portfolio, weeklyDividends, taxes, margin, marginCalls });
   } catch {
     return NextResponse.json({ error: 'data fetch failed' }, { status: 500 });
   }
