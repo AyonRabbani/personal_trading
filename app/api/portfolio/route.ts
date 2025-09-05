@@ -40,8 +40,16 @@ export async function POST(req: NextRequest) {
     const taxes: { date: string; amount: number }[] = [];
     const margin: { date: string; loan: number; cash: number; uec: number }[] = [];
     const dividends: { date: string; amount: number }[] = [];
+    const prices: { date: string; [symbol: string]: number }[] = [];
 
     dates.forEach((date, i) => {
+      const dateStr = date.toISOString().slice(0, 10);
+      const priceRow: { date: string; [symbol: string]: number } = { date: dateStr };
+      symbols.forEach((sym, idx) => {
+        const p = charts[idx].indicators?.adjclose?.[0]?.adjclose?.[i] || 0;
+        priceRow[sym] = p;
+      });
+
       if (i > 0 && date.getDate() === 1) {
         const totalCash = Number(monthly) + cash;
         const investEquity = totalCash * 0.75;
@@ -49,8 +57,8 @@ export async function POST(req: NextRequest) {
         const borrow = investTotal - investEquity;
         marginLoan += borrow;
         cash = totalCash - investEquity;
-        symbols.forEach((sym, idx) => {
-          const price = charts[idx].indicators?.adjclose?.[0]?.adjclose?.[i] || 0;
+        symbols.forEach((sym) => {
+          const price = priceRow[sym];
           if (price) holdings[sym] += (investTotal / n) / price;
         });
       }
@@ -67,7 +75,7 @@ export async function POST(req: NextRequest) {
           dailyDividend += amount;
           const weekKey = startOfWeek(date).toISOString().slice(0, 10);
           weeklyMap.set(weekKey, (weeklyMap.get(weekKey) || 0) + amount);
-          taxes.push({ date: date.toISOString().slice(0, 10), amount: amount * 0.15 });
+          taxes.push({ date: dateStr, amount: amount * 0.15 });
         }
       });
 
@@ -77,24 +85,22 @@ export async function POST(req: NextRequest) {
         const borrow = investTotal - investEquity;
         marginLoan += borrow;
         cash += dailyDividend - investEquity;
-        symbols.forEach((sym, idx) => {
-          const price = charts[idx].indicators?.adjclose?.[0]?.adjclose?.[i] || 0;
+        symbols.forEach((sym) => {
+          const price = priceRow[sym];
           if (price) holdings[sym] += (investTotal / n) / price;
         });
-        dividends.push({ date: date.toISOString().slice(0, 10), amount: dailyDividend });
+        dividends.push({ date: dateStr, amount: dailyDividend });
       }
 
-      const value = symbols.reduce((sum, sym, idx) => {
-        const price = charts[idx].indicators?.adjclose?.[0]?.adjclose?.[i] || 0;
-        return sum + holdings[sym] * price;
-      }, 0);
-      portfolio.push({ date: date.toISOString().slice(0, 10), value });
-      margin.push({ date: date.toISOString().slice(0, 10), loan: marginLoan, cash, uec: value });
+      const value = symbols.reduce((sum, sym) => sum + holdings[sym] * priceRow[sym], 0);
+      portfolio.push({ date: dateStr, value });
+      margin.push({ date: dateStr, loan: marginLoan, cash, uec: value });
+      prices.push(priceRow);
     });
 
     const weeklyDividends = Array.from(weeklyMap.entries()).map(([week, amount]) => ({ week, amount }));
 
-    return NextResponse.json({ portfolio, weeklyDividends, taxes, margin, dividends });
+    return NextResponse.json({ portfolio, weeklyDividends, taxes, margin, dividends, prices });
   } catch {
     return NextResponse.json({ error: 'data fetch failed' }, { status: 500 });
   }
