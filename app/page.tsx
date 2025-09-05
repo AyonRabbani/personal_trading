@@ -15,7 +15,7 @@ export default function HomePage() {
     weeklyDividends: { week: string; amount: number }[];
     taxes: { date: string; amount: number }[];
     margin: { date: string; loan: number; cash: number; uec: number }[];
-    marginCalls: { date: string }[];
+    dividends: { date: string; amount: number }[];
   }
   const [data, setData] = useState<PortfolioResponse | null>(null);
   const [loading, setLoading] = useState(false);
@@ -106,7 +106,7 @@ export default function HomePage() {
             weeklyDividends={data.weeklyDividends}
             taxes={data.taxes}
           />
-          <MarginAnalysis margin={data.margin} marginCalls={data.marginCalls} />
+          <MarginAnalysis margin={data.margin} dividends={data.dividends} />
         </div>
       )}
     </main>
