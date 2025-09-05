@@ -38,22 +38,24 @@ export async function POST(req: NextRequest) {
     const portfolio: { date: string; value: number }[] = [];
     const weeklyMap = new Map<string, number>();
     const taxes: { date: string; amount: number }[] = [];
-    const margin: { date: string; loan: number; cash: number }[] = [];
+    const margin: { date: string; loan: number; cash: number; uec: number }[] = [];
     const marginCalls: { date: string }[] = [];
 
     dates.forEach((date, i) => {
       if (i > 0 && date.getDate() === 1) {
-        const investEquity = Number(monthly) + cash;
+        const totalCash = Number(monthly) + cash;
+        const investEquity = totalCash * 0.75;
         const investTotal = investEquity * targetLev;
         const borrow = investTotal - investEquity;
         marginLoan += borrow;
-        cash = 0;
+        cash = totalCash - investEquity;
         symbols.forEach((sym, idx) => {
           const price = charts[idx].indicators?.adjclose?.[0]?.adjclose?.[i] || 0;
           if (price) holdings[sym] += (investTotal / n) / price;
         });
       }
 
+      let dailyDividend = 0;
       symbols.forEach((sym, idx) => {
         const events = charts[idx].events?.dividends as Record<number, { amount: number }> | undefined;
         const ts = charts[idx].timestamp?.[i];
@@ -62,12 +64,24 @@ export async function POST(req: NextRequest) {
           const shares = holdings[sym];
           const amount = shares * div;
           marginLoan = Math.max(marginLoan - amount, 0);
-          cash += amount;
+          dailyDividend += amount;
           const weekKey = startOfWeek(date).toISOString().slice(0, 10);
           weeklyMap.set(weekKey, (weeklyMap.get(weekKey) || 0) + amount);
           taxes.push({ date: date.toISOString().slice(0, 10), amount: amount * 0.15 });
         }
       });
+
+      if (dailyDividend > 0) {
+        const investEquity = dailyDividend * 0.75;
+        const investTotal = investEquity * targetLev;
+        const borrow = investTotal - investEquity;
+        marginLoan += borrow;
+        cash += dailyDividend - investEquity;
+        symbols.forEach((sym, idx) => {
+          const price = charts[idx].indicators?.adjclose?.[0]?.adjclose?.[i] || 0;
+          if (price) holdings[sym] += (investTotal / n) / price;
+        });
+      }
 
       const value = symbols.reduce((sum, sym, idx) => {
         const price = charts[idx].indicators?.adjclose?.[0]?.adjclose?.[i] || 0;
@@ -79,7 +93,7 @@ export async function POST(req: NextRequest) {
         marginCalls.push({ date: date.toISOString().slice(0, 10) });
       }
       portfolio.push({ date: date.toISOString().slice(0, 10), value });
-      margin.push({ date: date.toISOString().slice(0, 10), loan: marginLoan, cash });
+      margin.push({ date: date.toISOString().slice(0, 10), loan: marginLoan, cash, uec: value });
     });
 
     const weeklyDividends = Array.from(weeklyMap.entries()).map(([week, amount]) => ({ week, amount }));

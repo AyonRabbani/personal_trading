@@ -32,6 +32,10 @@ export default function PortfolioCharts({ portfolio, weeklyDividends, taxes }: P
           </LineChart>
         </ResponsiveContainer>
       </div>
+      <p className="text-sm text-gray-600">
+        Assumes 75% of available cash is deployed at 1.75x leverage with a 25% cash
+        reserve.
+      </p>
       <div className="h-64 w-full">
         <ResponsiveContainer>
           <BarChart data={weeklyDividends}>
@@ -43,6 +47,10 @@ export default function PortfolioCharts({ portfolio, weeklyDividends, taxes }: P
           </BarChart>
         </ResponsiveContainer>
       </div>
+      <p className="text-sm text-gray-600">
+        Weekly dividend totals are reinvested at 1.75x leverage while 25% remains as
+        cash equity.
+      </p>
       <div className="h-64 w-full">
         <ResponsiveContainer>
           <BarChart data={taxes}>
@@ -54,6 +62,9 @@ export default function PortfolioCharts({ portfolio, weeklyDividends, taxes }: P
           </BarChart>
         </ResponsiveContainer>
       </div>
+      <p className="text-sm text-gray-600">
+        Taxes assume a flat 15% rate applied to dividends on the payment date.
+      </p>
     </div>
   );
 }
