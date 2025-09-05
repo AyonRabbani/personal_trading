@@ -16,7 +16,7 @@ export default function HomePage() {
     taxes: { date: string; amount: number }[];
     margin: { date: string; loan: number; cash: number; uec: number }[];
     dividends: { date: string; amount: number }[];
-    prices?: { date: string; [ticker: string]: number }[];
+    prices?: { date: string; [ticker: string]: number | string }[];
   }
   const [data, setData] = useState<PortfolioResponse | null>(null);
   const [loading, setLoading] = useState(false);

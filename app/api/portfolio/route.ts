@@ -40,11 +40,12 @@ export async function POST(req: NextRequest) {
     const taxes: { date: string; amount: number }[] = [];
     const margin: { date: string; loan: number; cash: number; uec: number }[] = [];
     const dividends: { date: string; amount: number }[] = [];
-    const prices: { date: string; [symbol: string]: number }[] = [];
+    type PriceRow = { date: string; [symbol: string]: number | string };
+    const prices: PriceRow[] = [];
 
     dates.forEach((date, i) => {
       const dateStr = date.toISOString().slice(0, 10);
-      const priceRow: { date: string; [symbol: string]: number } = { date: dateStr };
+      const priceRow: PriceRow = { date: dateStr };
       symbols.forEach((sym, idx) => {
         const p = charts[idx].indicators?.adjclose?.[0]?.adjclose?.[i] || 0;
         priceRow[sym] = p;
@@ -58,7 +59,7 @@ export async function POST(req: NextRequest) {
         marginLoan += borrow;
         cash = totalCash - investEquity;
         symbols.forEach((sym) => {
-          const price = priceRow[sym];
+          const price = priceRow[sym] as number;
           if (price) holdings[sym] += (investTotal / n) / price;
         });
       }
@@ -86,13 +87,13 @@ export async function POST(req: NextRequest) {
         marginLoan += borrow;
         cash += dailyDividend - investEquity;
         symbols.forEach((sym) => {
-          const price = priceRow[sym];
+          const price = priceRow[sym] as number;
           if (price) holdings[sym] += (investTotal / n) / price;
         });
         dividends.push({ date: dateStr, amount: dailyDividend });
       }
 
-      const value = symbols.reduce((sum, sym) => sum + holdings[sym] * priceRow[sym], 0);
+      const value = symbols.reduce((sum, sym) => sum + holdings[sym] * (priceRow[sym] as number), 0);
       portfolio.push({ date: dateStr, value });
       margin.push({ date: dateStr, loan: marginLoan, cash, uec: value });
       prices.push(priceRow);
